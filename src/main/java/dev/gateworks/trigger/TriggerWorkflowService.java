@@ -100,6 +100,7 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set("triggers." + id + ".created-by", player.getUniqueId().toString());
         plugin.getConfig().set("triggers." + id + ".selection-blocks", selections.get(player.getUniqueId()).getBlockCount());
         plugin.saveConfig();
+        removeSelectionBook(player);
         giveTriggerBook(player, id);
         player.sendMessage(Component.text("Created trigger '" + name + "'. Its permanent Trigger Book is in your inventory.", NamedTextColor.GREEN));
     }
@@ -111,6 +112,7 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set("triggers." + id + ".selection-blocks", selections.get(player.getUniqueId()).getBlockCount());
         plugin.getConfig().set("triggers." + id + ".last-attached-by", player.getUniqueId().toString());
         plugin.saveConfig();
+        removeSelectionBook(player);
         giveTriggerBook(player, id);
         player.sendMessage(Component.text("Selection attached to '" + plugin.getConfig().getString("triggers." + id + ".name") + "'.", NamedTextColor.GREEN));
         return true;
@@ -174,6 +176,15 @@ public final class TriggerWorkflowService {
     private Component link(String label, String command) {
         return Component.text("▶ " + label, NamedTextColor.BLUE)
                 .clickEvent(ClickEvent.runCommand(command));
+    }
+
+    private void removeSelectionBook(Player player) {
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            ItemStack item = player.getInventory().getItem(slot);
+            if (item == null || item.getType() != Material.WRITTEN_BOOK) continue;
+            String found = item.getItemMeta().getPersistentDataContainer().get(bookType, PersistentDataType.STRING);
+            if ("selection".equals(found)) player.getInventory().setItem(slot, null);
+        }
     }
 
     private ItemStack findBook(Player player, String type) {
