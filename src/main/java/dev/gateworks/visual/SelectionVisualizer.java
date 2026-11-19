@@ -11,18 +11,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.List;
 import java.util.Set;
 
 /**
- * Renders a lightweight, per-player particle outline around each selection group.
- * No world blocks are changed and other players do not see these particles.
+ * Renders per-player selection feedback.
+ *
+ * The outer group outline communicates the region bounds. A marker at the
+ * center of every selected block communicates actual membership, so removing
+ * a block from the middle of a cuboid is immediately visible as a missing marker.
+ * No world blocks are changed and particles are sent only to the selecting player.
  */
 public final class SelectionVisualizer {
     private static final long REFRESH_TICKS = 10L;
     private static final double PARTICLE_SPACING = 0.5;
     private static final int MAX_POINTS_PER_EDGE = 400;
-    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 3000;
+    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 6000;
 
     private final JavaPlugin plugin;
     private final SelectionService selections;
@@ -64,6 +67,15 @@ public final class SelectionVisualizer {
         BlockPosition first = group.iterator().next();
         World world = Bukkit.getWorld(first.worldId());
         if (world == null || !player.getWorld().getUID().equals(world.getUID())) return;
+
+        // A center marker for every selected block makes holes inside a region visible.
+        // This is deliberately independent of the group's outer bounding box.
+        for (BlockPosition block : group) {
+            if (emitted[0] >= MAX_PARTICLES_PER_PLAYER_PER_REFRESH) return;
+            Location center = new Location(world, block.x() + 0.5, block.y() + 0.5, block.z() + 0.5);
+            player.spawnParticle(Particle.END_ROD, center, 1, 0, 0, 0, 0);
+            emitted[0]++;
+        }
 
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
