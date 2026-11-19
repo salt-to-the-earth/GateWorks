@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -73,6 +74,15 @@ public final class SelectionSession {
     public boolean contains(BlockPosition position) { return groupByBlock.containsKey(position); }
     public int getBlockCount() { return groupByBlock.size(); }
     public int getGroupCount() { return blocksByGroup.size(); }
+
+    /** Returns defensive copies for rendering; callers cannot mutate the selection. */
+    public List<Set<BlockPosition>> getGroupsSnapshot() {
+        List<Set<BlockPosition>> snapshot = new ArrayList<>();
+        for (Set<BlockPosition> group : blocksByGroup.values()) {
+            snapshot.add(Set.copyOf(group));
+        }
+        return List.copyOf(snapshot);
+    }
 
     public void clear() {
         groupByBlock.clear();
