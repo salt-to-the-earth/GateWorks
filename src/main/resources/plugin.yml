@@ -1,0 +1,19 @@
+name: GateWorks
+version: '${version}'
+main: dev.gateworks.GateWorksPlugin
+description: A configurable automation and control framework for Minecraft servers.
+api-version: '26.3'
+authors: [GateWorks Contributors]
+website: https://github.com/salt-to-the-earth/GateWorks
+
+commands:
+  gateworks:
+    description: GateWorks administration and selection commands.
+    usage: /gateworks <wand|selection|clear|help>
+    aliases: [gw]
+    permission: gateworks.admin
+
+permissions:
+  gateworks.admin:
+    description: Allows full GateWorks administration.
+    default: op

@@ -6,23 +6,40 @@ GateWorks is an open-source, server-side Paper plugin for building mechanisms th
 
 Players use an ordinary, unmodified Minecraft Java client. No client-side mod is required.
 
-> **Development status:** Early development. The first release is a foundation, not a feature-complete automation system. Features described in the roadmap are planned and must not be assumed to be implemented yet.
+> **Current status: 0.1.0 — early development.** This first milestone is a working selection-wand prototype and project foundation. It is not yet the complete automation system described below.
+
+## What works in 0.1.0
+
+- Paper plugin bootstrap and `/gateworks` command (`/gw` alias).
+- A uniquely tagged selection wand, obtained with `/gateworks wand`.
+- Left-click to add an individual block.
+- Shift + left-click to add a cuboid between the previous selection point and the clicked block.
+- Right-click to remove one selected block.
+- Shift + right-click to remove the entire selection group containing that block.
+- `/gateworks selection` to show selection size and group count.
+- `/gateworks clear` to clear the current temporary selection.
+- A 4,096-block limit on a single cuboid gesture.
+- Unit tests for selection grouping and removal.
+- GitHub Actions workflow to compile the plugin and run tests.
+
+**Important limitations:** Selection data is currently in memory only and is lost when the server restarts. Selection highlighting is currently a brief particle cue, not a persistent region outline. The book interface, trigger engine, status monitoring, action engine, HubControl integration, persistence, cooldowns, anti-spam protection, and diagnostics are not implemented yet.
 
 ## Project goals
 
-- Configure mechanisms through an in-game written-book interface rather than clunky inventory menus.
+- Configure mechanisms through an in-game written-book interface rather than inventory-menu GUIs.
 - Use a selection wand to identify individual blocks and cuboid regions.
 - Separate physical **triggers**, external **status monitors**, and configurable **actions**.
-- Keep requested state separate from confirmed state. For example, requesting a server start does not mark a portal ON; a status monitor must confirm that the server is running.
+- Keep requested state separate from confirmed state. Requesting a server start must not mark a portal ON; a status monitor must confirm that the server is running.
+- Keep trigger request actions separate from state-transition actions.
 - Provide configurable cooldowns and anti-spam protection.
-- Include diagnostics and an activity history in every mechanism's configuration.
+- Include diagnostics and activity history in every mechanism's configuration.
 - Keep configuration data on the server; books are interfaces, not the authoritative data store.
-- Integrate with other plugins through documented adapters, beginning with the HubControl environment.
+- Integrate with other plugins through documented adapters, beginning with HubControl.
 
 ## Planned architecture
 
 1. **Trigger engine** — buttons, levers, pressure plates, and other supported interactions.
-2. **State engine** — OFF, ON, and transitional/error states, with explicit confirmation rules.
+2. **State engine** — OFF, ON, transitional, unknown, and error states, with explicit confirmation rules.
 3. **Status providers** — scoreboard, plugin API, and other carefully scoped status sources.
 4. **Action engine** — commands and block changes, with request actions kept separate from state-transition actions.
 5. **Selection and regions** — individual block selections and cuboid groups, with per-player visual feedback.
@@ -30,40 +47,32 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 7. **Protection** — cooldowns, anti-spam lockouts, safe control restoration, optional configured consequences, and administrator bypass.
 8. **Diagnostics** — validation, source connectivity, last confirmed status, recent events, and actionable error details.
 
-## Compatibility
+## Compatibility target
 
-- Target platform: Paper.
-- Target API line: Paper / Minecraft 26.3.
-- Target Java: Java 25.
-- Client requirement: unmodified Minecraft Java client.
+- Server platform: Paper.
+- API line: Paper / Minecraft 26.3.
+- Java: 25.
+- Client: ordinary, unmodified Minecraft Java client.
 
-The project deliberately avoids Paper internals (NMS) unless a documented API limitation makes an isolated compatibility layer necessary.
+The project avoids Paper internals (NMS) unless a documented API limitation makes an isolated compatibility layer necessary.
 
 ## Building
 
-Install JDK 25 and Gradle (or use the included Gradle Wrapper once it is added).
+Install JDK 25 and Gradle 9.2.1 or a compatible Gradle 9.x release.
 
 ```bash
-./gradlew build
+gradle clean test build
 ```
 
-The plugin JAR will be in `build/libs/`.
+The plugin JAR will be created in `build/libs/`.
 
 ## Installation
 
-Copy the built `GateWorks-<version>.jar` into the Paper server's `plugins` directory, then restart the server. Consult the release notes before using a development build on a production server.
+Copy `build/libs/GateWorks-0.1.0.jar` into the Paper server's `plugins` directory and restart the server. This is an early development build; use a test server, not a production server.
 
-## Development principles
+## Roadmap and contributing
 
-- Never report an external state as confirmed merely because a command was submitted.
-- Never let a listener's state update accidentally execute a player's ON/OFF request command.
-- Never overwrite a block during automatic restoration if another player or plugin has changed that location.
-- Never trust a copied or edited book as authorization; validate all configuration identities and permissions server-side.
-- Keep potentially destructive features opt-in and visible in diagnostics.
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned milestones and [CONTRIBUTING.md](CONTRIBUTING.md) for development guidance.
+See [ROADMAP.md](ROADMAP.md) for milestones and [CONTRIBUTING.md](CONTRIBUTING.md) for development guidance.
 
 ## License
 
