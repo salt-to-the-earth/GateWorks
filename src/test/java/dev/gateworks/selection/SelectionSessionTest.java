@@ -23,6 +23,17 @@ class SelectionSessionTest {
         assertEquals(1, session.getGroupCount());
     }
 
+    @Test void cuboidAbsorbsItsPreviouslySelectedFirstCorner() {
+        SelectionSession session = new SelectionSession();
+        BlockPosition first = new BlockPosition(world, 1, 64, 1);
+        BlockPosition second = new BlockPosition(world, 3, 64, 1);
+        session.addSingle(first);
+        assertTrue(session.addCuboid(first, second, 10));
+        assertEquals(3, session.getBlockCount());
+        assertEquals(1, session.getGroupCount());
+        assertEquals(3, session.removeGroupAt(first));
+    }
+
     @Test void rejectsOversizedCuboidWithoutChangingSelection() {
         SelectionSession session = new SelectionSession();
         session.addSingle(new BlockPosition(world, 0, 64, 0));
