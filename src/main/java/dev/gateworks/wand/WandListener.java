@@ -52,7 +52,8 @@ public final class WandListener implements Listener {
             return;
         }
         if (triggerWorkflow.isTriggerDeviceBlock(clicked)) {
-            triggerWorkflow.selectTriggerDevice(player, clicked);
+            if (action == Action.LEFT_CLICK_BLOCK) triggerWorkflow.selectTriggerDevice(player, clicked);
+            else triggerWorkflow.clearPendingTriggerDevice(player);
             return;
         }
         BlockPosition position = new BlockPosition(clicked.getWorld().getUID(),
