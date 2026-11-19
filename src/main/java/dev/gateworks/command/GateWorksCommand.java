@@ -54,7 +54,7 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
 
     private void handleBook(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(Component.text("Use /gateworks book refresh|name|attach <trigger-id>|button <trigger-id>", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Use /gateworks book refresh|rename <trigger-id>|edit-selection <trigger-id>|attach <trigger-id>|button <trigger-id>", NamedTextColor.YELLOW));
             return;
         }
         switch (args[1].toLowerCase()) {
@@ -62,7 +62,14 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
                 triggerWorkflow.refreshSelectionBook(player);
                 player.sendMessage(Component.text("Selection book refreshed.", NamedTextColor.GREEN));
             }
-            case "name", "create" -> triggerWorkflow.promptForName(player);
+            case "rename" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.promptForName(player, args[2]);
+            }
+            case "edit-selection" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.beginRegionEdit(player, args[2]);
+            }
             case "attach" -> {
                 if (args.length < 3 || !triggerWorkflow.attachSelection(player, args[2])) {
                     player.sendMessage(Component.text("Trigger not found. Refresh the Selection Book and choose an existing trigger.", NamedTextColor.RED));
