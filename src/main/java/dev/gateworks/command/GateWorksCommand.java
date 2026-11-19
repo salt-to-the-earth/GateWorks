@@ -13,13 +13,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
+import java.util.Locale;
 
 public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     private final SelectionService selections;
     private final WandItemService wandItems;
 
-    public GateWorksCommand(dev.gateworks.GateWorksPlugin plugin, SelectionService selections,
-                            WandItemService wandItems) {
+    public GateWorksCommand(SelectionService selections, WandItemService wandItems) {
         this.selections = selections;
         this.wandItems = wandItems;
     }
@@ -38,7 +38,7 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("This GateWorks command must be run by a player.");
             return true;
         }
-        switch (args[0].toLowerCase()) {
+        switch (args[0].toLowerCase(Locale.ROOT)) {
             case "wand" -> giveWand(player);
             case "selection" -> showSelection(player);
             case "clear" -> clearSelection(player);
@@ -83,7 +83,7 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             return List.of("wand", "selection", "clear", "help").stream()
-                    .filter(value -> value.startsWith(args[0].toLowerCase())).toList();
+                    .filter(value -> value.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
         return List.of();
     }

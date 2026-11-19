@@ -21,8 +21,7 @@ public final class WandListener implements Listener {
     private final SelectionService selections;
     private final WandItemService wandItems;
 
-    public WandListener(dev.gateworks.GateWorksPlugin plugin, SelectionService selections,
-                        WandItemService wandItems) {
+    public WandListener(SelectionService selections, WandItemService wandItems) {
         this.selections = selections;
         this.wandItems = wandItems;
     }

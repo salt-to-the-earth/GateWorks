@@ -24,7 +24,11 @@ public final class SelectionSession {
         blocksByGroup.put(groupId, new LinkedHashSet<>(Set.of(position)));
     }
 
-    /** Adds the inclusive cuboid, or returns false without changes if it is too large. */
+    /**
+     * Adds the inclusive cuboid as one selection group. Existing groups that
+     * intersect the cuboid are merged so either corner belongs to the new group.
+     * Returns false without changes if the requested cuboid exceeds maxBlocks.
+     */
     public boolean addCuboid(BlockPosition first, BlockPosition second, int maxBlocks) {
         if (!first.worldId().equals(second.worldId()) || maxBlocks < 1) return false;
         long sizeX = Math.abs((long) first.x() - second.x()) + 1;
@@ -33,20 +37,40 @@ public final class SelectionSession {
         if (sizeX > maxBlocks || sizeY > maxBlocks / sizeX
                 || sizeZ > maxBlocks / (sizeX * sizeY)) return false;
 
-        UUID groupId = UUID.randomUUID();
-        Set<BlockPosition> group = new LinkedHashSet<>();
-        for (int x = Math.min(first.x(), second.x()); x <= Math.max(first.x(), second.x()); x++) {
-            for (int y = Math.min(first.y(), second.y()); y <= Math.max(first.y(), second.y()); y++) {
-                for (int z = Math.min(first.z(), second.z()); z <= Math.max(first.z(), second.z()); z++) {
-                    BlockPosition position = new BlockPosition(first.worldId(), x, y, z);
-                    if (!groupByBlock.containsKey(position)) {
-                        groupByBlock.put(position, groupId);
-                        group.add(position);
-                    }
+        int minX = Math.min(first.x(), second.x());
+        int maxX = Math.max(first.x(), second.x());
+        int minY = Math.min(first.y(), second.y());
+        int maxY = Math.max(first.y(), second.y());
+        int minZ = Math.min(first.z(), second.z());
+        int maxZ = Math.max(first.z(), second.z());
+
+        Set<UUID> groupsToMerge = new LinkedHashSet<>();
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    UUID existingGroup = groupByBlock.get(new BlockPosition(first.worldId(), x, y, z));
+                    if (existingGroup != null) groupsToMerge.add(existingGroup);
                 }
             }
         }
-        if (!group.isEmpty()) blocksByGroup.put(groupId, group);
+
+        UUID newGroupId = UUID.randomUUID();
+        Set<BlockPosition> mergedGroup = new LinkedHashSet<>();
+        for (UUID oldGroupId : groupsToMerge) {
+            Set<BlockPosition> oldGroup = blocksByGroup.remove(oldGroupId);
+            if (oldGroup != null) mergedGroup.addAll(oldGroup);
+        }
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    mergedGroup.add(new BlockPosition(first.worldId(), x, y, z));
+                }
+            }
+        }
+
+        for (BlockPosition member : mergedGroup) groupByBlock.put(member, newGroupId);
+        blocksByGroup.put(newGroupId, mergedGroup);
         return true;
     }
 

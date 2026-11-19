@@ -15,12 +15,14 @@ class SelectionSessionTest {
         assertEquals(2, session.getGroupCount());
     }
 
-    @Test void addsInclusiveCuboidAsOneGroup() {
+    @Test void addsInclusiveCuboidAsOneGroupAndMergesItsAnchor() {
         SelectionSession session = new SelectionSession();
-        assertTrue(session.addCuboid(new BlockPosition(world, 1, 60, 1),
-                new BlockPosition(world, 3, 62, 2), 100));
+        BlockPosition first = new BlockPosition(world, 1, 60, 1);
+        session.addSingle(first);
+        assertTrue(session.addCuboid(first, new BlockPosition(world, 3, 62, 2), 100));
         assertEquals(18, session.getBlockCount());
         assertEquals(1, session.getGroupCount());
+        assertEquals(18, session.removeGroupAt(first));
     }
 
     @Test void rejectsOversizedCuboidWithoutChangingSelection() {
