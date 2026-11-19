@@ -17,17 +17,17 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 - Right-click to remove one selected block.
 - Shift + right-click to remove the entire selection group containing that block.
 - Per-player particle highlighting, refreshed every half-second without modifying world blocks.
-- A temporary **Selection Book** is automatically issued when the administrator first uses the wand. It displays the current selection size and offers clickable actions.
-- The Selection Book can start creation of a named trigger or display clickable choices for existing triggers.
+- A **Temp Selection** book is automatically issued when the administrator first uses the wand. It separates selection information from the page used to attach a selection to a trigger.
+- Selecting a supported trigger device (button, lever, pressure plate, or tripwire hook) registers a trigger with the temporary name **Temp Trigger** and issues its separate book. Clicking the trigger name opens chat naming. The trigger book separates its overview from its region-selection page.
 - Creating or attaching a selection issues that trigger's permanent **Trigger Book** and removes the temporary Selection Book.
 - Trigger names and unique IDs are saved in the plugin configuration. Selected block coordinates and selection groups are also recorded with the trigger.
-- The Trigger Book can start button association. The administrator then uses the GateWorks wand to click the physical Minecraft button.
+- The Trigger Book can reissue itself when its physical trigger device is selected again with the wand. Its region page starts a fresh region-editing session. Attaching a selection saves its block coordinates and groups, clears the active selection, and removes the Temp Selection book.
 - Button world and coordinates are saved with the trigger.
 - `/gateworks selection` shows selection size and group count; `/gateworks clear` clears the current temporary selection.
 - A 4,096-block limit on a single cuboid gesture.
 - GitHub Actions workflow to compile the plugin and run tests.
 
-**Current limitations:** This is the framework and user-interface stage, not the automation stage. Buttons are recorded against triggers but do not activate actions yet. Trigger region coordinates and button association are persisted, while the administrator's in-progress selection workspace is temporary and is lost on server restart. The book pages are refreshed when the administrator changes the selection or uses the refresh action. Status monitoring, action execution, HubControl integration, cooldowns, anti-spam protection, and diagnostics remain future stages.
+**Current limitations:** This is the framework and user-interface stage, not the automation stage. Buttons are recorded against triggers but do not activate actions yet. Trigger region coordinates and button association are persisted, while the administrator's in-progress selection workspace is temporary and is lost on server restart. The book pages are refreshed when the administrator changes the selection or uses the refresh action. The visualizer draws individual block perimeters and may cap particle output for performance on very large selections. Status monitoring, action execution, HubControl integration, cooldowns, anti-spam protection, and diagnostics remain future stages.
 
 ## Project goals
 
