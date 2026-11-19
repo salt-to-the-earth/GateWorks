@@ -24,6 +24,7 @@ public final class TriggerWorkflowService {
     private final NamespacedKey bookType;
     private final NamespacedKey bookId;
     private final Map<UUID, String> naming = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID, String> regionTargets = new HashMap<>();
     private final Map<UUID, String> awaitingButton = new HashMap<>();
     private final Map<UUID, BlockPosition> pendingDevices = new HashMap<>();
 
@@ -41,7 +42,7 @@ public final class TriggerWorkflowService {
         ItemStack target = book;
         target.editMeta(meta -> {
             BookMeta bm = (BookMeta) meta;
-            bm.title(Component.text("GateWorks Selection"));
+            bm.title(Component.text("Temp Selection"));
             bm.author(Component.text("GateWorks"));
             bm.pages(selectionPages(player));
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "selection");
@@ -54,64 +55,59 @@ public final class TriggerWorkflowService {
     private List<Component> selectionPages(Player player) {
         var session = selections.get(player.getUniqueId());
         List<Component> pages = new ArrayList<>();
-        pages.add(Component.text("GATEWORKS\nSelection Workspace\n\n", NamedTextColor.DARK_AQUA)
-                .append(Component.text("Blocks: ", NamedTextColor.BLACK))
-                .append(Component.text(String.valueOf(session.getBlockCount()), NamedTextColor.DARK_GREEN))
-                .append(Component.text("\nGroups: ", NamedTextColor.BLACK))
-                .append(Component.text(String.valueOf(session.getGroupCount()), NamedTextColor.DARK_GREEN))
-                .append(Component.text("\n\n", NamedTextColor.BLACK))
-                .append(link("Refresh selection", "/gateworks book refresh"))
-                .append(Component.text("\n\nTrigger device: ", NamedTextColor.BLACK))
-                .append(Component.text(describePendingDevice(player), pendingDevices.containsKey(player.getUniqueId()) ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
-                .append(Component.text("\n\n", NamedTextColor.BLACK))
-                .append(pendingDevices.containsKey(player.getUniqueId())
-                        ? link("Create a new trigger", "/gateworks book name")
-                        : Component.text("Select a trigger device with the wand before creating a trigger.", NamedTextColor.GRAY))
-                .append(Component.text("\n\nExisting triggers:\n", NamedTextColor.BLACK)));
+        pages.add(Component.text("GATEWORKS\\nTemp Selection\\n\\n", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Blocks selected: " + session.getBlockCount() + "\\n", NamedTextColor.BLACK))
+                .append(Component.text("Selection groups: " + session.getGroupCount() + "\\n\\n", NamedTextColor.BLACK))
+                .append(link("Refresh this page", "/gateworks book refresh"))
+                .append(Component.text("\\n\\nTurn to the next page to attach this selection to a trigger.", NamedTextColor.GRAY)));
+        Component pageTwo = Component.text("SELECTION OPTIONS\\n\\n", NamedTextColor.DARK_AQUA);
+        String targetId = regionTargets.get(player.getUniqueId());
+        if (targetId != null) {
+            pageTwo = pageTwo.append(Component.text("Editing trigger: " + plugin.getConfig().getString("triggers." + targetId + ".name", "Temp Trigger") + "\\n\\n", NamedTextColor.BLACK))
+                    .append(link("Save selection to this trigger", "/gateworks book attach " + targetId))
+                    .append(Component.text("\\n\\n", NamedTextColor.BLACK));
+        }
+        pageTwo = pageTwo.append(Component.text("Attach selection to an existing trigger:\\n", NamedTextColor.BLACK));
         int count = 0;
         for (String id : triggerIds()) {
             if (count++ >= 12) break;
-            String name = plugin.getConfig().getString("triggers." + id + ".name", "Unnamed");
-            pages.add(Component.text(name + "\n", NamedTextColor.DARK_AQUA)
-                    .append(link("Attach this selection", "/gateworks book attach " + id)));
+            String name = plugin.getConfig().getString("triggers." + id + ".name", "Temp Trigger");
+            pageTwo = pageTwo.append(Component.text("\\n" + name + "  ", NamedTextColor.DARK_AQUA))
+                    .append(link("Attach selection", "/gateworks book attach " + id));
         }
-        if (count == 0) pages.add(Component.text("No triggers have been created yet.", NamedTextColor.GRAY));
+        if (count == 0) pageTwo = pageTwo.append(Component.text("No triggers have been created yet.", NamedTextColor.GRAY));
+        pages.add(pageTwo);
         return pages;
     }
 
-    public void promptForName(Player player) {
-        if (!pendingDevices.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("[GateWorks] Select a trigger device with the wand before creating a trigger.", NamedTextColor.RED));
-            refreshSelectionBook(player);
+    public void promptForName(Player player, String id) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) {
+            player.sendMessage(Component.text("[GateWorks] Trigger could not be found.", NamedTextColor.RED));
             return;
         }
-        naming.put(player.getUniqueId(), "new");
+        naming.put(player.getUniqueId(), id);
         player.closeInventory();
-        player.sendMessage(Component.text("[GateWorks] Type the new trigger name in chat. Type cancel to stop.", NamedTextColor.GOLD));
+        player.sendMessage(Component.text("[GateWorks] Type the trigger's new name in chat. Type cancel to keep its current name.", NamedTextColor.GOLD));
     }
 
     public void acceptName(Player player, String rawName) {
-        if (!naming.containsKey(player.getUniqueId())) return;
-        naming.remove(player.getUniqueId());
+        String id = naming.remove(player.getUniqueId());
+        if (id == null) return;
         if (rawName.equalsIgnoreCase("cancel")) {
-            player.sendMessage(Component.text("Trigger creation cancelled.", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Trigger name unchanged.", NamedTextColor.YELLOW));
+            giveTriggerBook(player, id);
             return;
         }
         String name = rawName.trim();
         if (name.isEmpty() || name.length() > 32) {
-            player.sendMessage(Component.text("Trigger names must be between 1 and 32 characters. Please try again with /gateworks book name.", NamedTextColor.RED));
+            naming.put(player.getUniqueId(), id);
+            player.sendMessage(Component.text("Names must be between 1 and 32 characters. Please try again.", NamedTextColor.RED));
             return;
         }
-        String id = UUID.randomUUID().toString();
         plugin.getConfig().set("triggers." + id + ".name", name);
-        plugin.getConfig().set("triggers." + id + ".created-by", player.getUniqueId().toString());
-        persistSelection(player, id);
-        persistDevice(player, id);
-        pendingDevices.remove(player.getUniqueId());
         plugin.saveConfig();
-        removeSelectionBook(player);
         giveTriggerBook(player, id);
-        player.sendMessage(Component.text("Created trigger '" + name + "'. Its permanent Trigger Book is in your inventory.", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Trigger renamed to '" + name + "'.", NamedTextColor.GREEN));
     }
 
     private void persistSelection(Player player, String triggerId) {
@@ -133,9 +129,36 @@ public final class TriggerWorkflowService {
 
     public void selectTriggerDevice(Player player, org.bukkit.block.Block block) {
         BlockPosition position = new BlockPosition(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
+        String existingId = findTriggerAt(position);
+        String id = existingId;
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+            plugin.getConfig().set("triggers." + id + ".name", "Temp Trigger");
+            plugin.getConfig().set("triggers." + id + ".created-by", player.getUniqueId().toString());
+            plugin.getConfig().set("triggers." + id + ".device.world", position.worldId().toString());
+            plugin.getConfig().set("triggers." + id + ".device.x", position.x());
+            plugin.getConfig().set("triggers." + id + ".device.y", position.y());
+            plugin.getConfig().set("triggers." + id + ".device.z", position.z());
+            plugin.getConfig().set("triggers." + id + ".device.material", block.getType().name());
+            plugin.saveConfig();
+            player.sendMessage(Component.text("[GateWorks] New trigger device registered. Click its name in the Temp Trigger book to name it.", NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text("[GateWorks] Existing trigger device selected.", NamedTextColor.GREEN));
+        }
         pendingDevices.put(player.getUniqueId(), position);
-        player.sendMessage(Component.text("[GateWorks] Trigger device selected: " + block.getType().name() + ".", NamedTextColor.GREEN));
+        giveTriggerBook(player, id);
         refreshSelectionBook(player);
+    }
+
+    private String findTriggerAt(BlockPosition position) {
+        for (String id : triggerIds()) {
+            String base = "triggers." + id + ".device.";
+            if (position.worldId().toString().equals(plugin.getConfig().getString(base + "world"))
+                    && position.x() == plugin.getConfig().getInt(base + "x")
+                    && position.y() == plugin.getConfig().getInt(base + "y")
+                    && position.z() == plugin.getConfig().getInt(base + "z")) return id;
+        }
+        return null;
     }
 
     public void clearPendingTriggerDevice(Player player) {
@@ -178,6 +201,8 @@ public final class TriggerWorkflowService {
     public boolean attachSelection(Player player, String id) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return false;
         persistSelection(player, id);
+        selections.get(player.getUniqueId()).clear();
+        regionTargets.remove(player.getUniqueId());
         if (pendingDevices.containsKey(player.getUniqueId())) {
             persistDevice(player, id);
             pendingDevices.remove(player.getUniqueId());
@@ -222,24 +247,33 @@ public final class TriggerWorkflowService {
         return true;
     }
 
+    public void beginRegionEdit(Player player, String id) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        selections.get(player.getUniqueId()).clear();
+        regionTargets.put(player.getUniqueId(), id);
+        refreshSelectionBook(player);
+        player.sendMessage(Component.text("Use the wand to select the blocks for this trigger, then save from page 2 of Temp Selection.", NamedTextColor.GOLD));
+    }
+
     public void giveTriggerBook(Player player, String id) {
         ItemStack book = findBook(player, "trigger:" + id);
         boolean newBook = book == null;
         if (newBook) book = new ItemStack(Material.WRITTEN_BOOK);
-        ItemStack target = book;
-        target.editMeta(meta -> {
+        book.editMeta(meta -> {
             BookMeta bm = (BookMeta) meta;
-            String name = plugin.getConfig().getString("triggers." + id + ".name", "Trigger");
+            String name = plugin.getConfig().getString("triggers." + id + ".name", "Temp Trigger");
             bm.title(Component.text(name.length() > 32 ? name.substring(0, 32) : name));
             bm.author(Component.text("GateWorks"));
-            boolean hasButton = plugin.getConfig().contains("triggers." + id + ".device.world");
-            String deviceType = plugin.getConfig().getString("triggers." + id + ".device.material", "Unknown");
+            String deviceType = plugin.getConfig().getString("triggers." + id + ".device.material", "Not set");
             int blocks = plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0);
-            bm.pages(Component.text("GATEWORKS\n" + name + "\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Selected blocks: " + blocks + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("Trigger device: " + (hasButton ? deviceType : "Not set") + "\n\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
-                    .append(link("Set / change trigger device", "/gateworks book button " + id))
-                    .append(Component.text("\n\nTrigger ID:\n" + id, NamedTextColor.GRAY)));
+            Component overview = Component.text("GATEWORKS\\n" + name + "\\n\\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Trigger device: " + deviceType + "\\n", NamedTextColor.BLACK))
+                    .append(Component.text("Selected blocks: " + blocks + "\\n\\n", NamedTextColor.BLACK))
+                    .append(link("Change trigger name", "/gateworks book rename " + id));
+            Component region = Component.text("REGION SELECTION\\n\\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\\n\\n", NamedTextColor.BLACK))
+                    .append(link("Change region selection", "/gateworks book edit-selection " + id));
+            bm.pages(overview, region);
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
