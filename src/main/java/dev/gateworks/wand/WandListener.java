@@ -51,6 +51,10 @@ public final class WandListener implements Listener {
             triggerWorkflow.attachButton(player, clicked);
             return;
         }
+        if (triggerWorkflow.isTriggerDeviceBlock(clicked)) {
+            triggerWorkflow.selectTriggerDevice(player, clicked);
+            return;
+        }
         BlockPosition position = new BlockPosition(clicked.getWorld().getUID(),
                 clicked.getX(), clicked.getY(), clicked.getZ());
         SelectionSession session = selections.get(player.getUniqueId());
