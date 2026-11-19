@@ -6,9 +6,9 @@ GateWorks is an open-source, server-side Paper plugin for building mechanisms th
 
 Players use an ordinary, unmodified Minecraft Java client. No client-side mod is required.
 
-> **Current status: 0.1.0 — early development.** This first milestone is a working selection-wand prototype and project foundation. It is not yet the complete automation system described below.
+> **Current status: 0.1.1 — early development.** This milestone provides a selection-wand prototype with persistent visual selection outlines. It is not yet the complete automation system described below.
 
-## What works in 0.1.0
+## What works in 0.1.1
 
 - Paper plugin bootstrap and `/gateworks` command (`/gw` alias).
 - A uniquely tagged selection wand, obtained with `/gateworks wand`.
@@ -16,13 +16,18 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 - Shift + left-click to add a cuboid between the previous selection point and the clicked block.
 - Right-click to remove one selected block.
 - Shift + right-click to remove the entire selection group containing that block.
+- **Automatic visual highlighting:** selected groups receive a particle outline, refreshed every half-second.
+- Highlighting is enabled by default in this test build and is visible only to the selecting administrator.
+- Individual selected blocks are outlined as small cubes; cuboid groups are outlined by their outer bounds.
 - `/gateworks selection` to show selection size and group count.
-- `/gateworks clear` to clear the current temporary selection.
+- `/gateworks clear` to clear the current temporary selection and its outline.
 - A 4,096-block limit on a single cuboid gesture.
 - Unit tests for selection grouping and removal.
 - GitHub Actions workflow to compile the plugin and run tests.
 
-**Important limitations:** Selection data is currently in memory only and is lost when the server restarts. Selection highlighting is currently a brief particle cue, not a persistent region outline. The book interface, trigger engine, status monitoring, action engine, HubControl integration, persistence, cooldowns, anti-spam protection, and diagnostics are not implemented yet.
+**Visual feedback details:** The outline uses client-visible particles and does not place, replace, or modify any world blocks. The current prototype outlines the bounding box of each selection group. If blocks are removed from the middle of a group, its outline still follows the group's remaining outer bounds. A per-player particle budget limits rendering work for large or numerous selections.
+
+**Important limitations:** Selection data is currently in memory only and is lost when the server restarts. The book interface, trigger engine, status monitoring, action engine, HubControl integration, persistence, cooldowns, anti-spam protection, and diagnostics are not implemented yet.
 
 ## Project goals
 
@@ -68,7 +73,7 @@ The plugin JAR will be created in `build/libs/`.
 
 ## Installation
 
-Copy `build/libs/GateWorks-0.1.0.jar` into the Paper server's `plugins` directory and restart the server. This is an early development build; use a test server, not a production server.
+Copy `build/libs/GateWorks-0.1.1.jar` into the Paper server's `plugins` directory and restart the server. This is an early development build; use a test server, not a production server.
 
 ## Roadmap and contributing
 
