@@ -179,10 +179,10 @@ public final class TriggerWorkflowService {
     private ItemStack findBook(Player player, String type) {
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() != Material.WRITTEN_BOOK) continue;
-            String found = item.getPersistentDataContainer().get(bookType, PersistentDataType.STRING);
+            String found = item.getItemMeta().getPersistentDataContainer().get(bookType, PersistentDataType.STRING);
             if (type.equals(found)) return item;
             if (type.startsWith("trigger:") && "trigger".equals(found)) {
-                String id = item.getPersistentDataContainer().get(bookId, PersistentDataType.STRING);
+                String id = item.getItemMeta().getPersistentDataContainer().get(bookId, PersistentDataType.STRING);
                 if (type.substring(8).equals(id)) return item;
             }
         }
