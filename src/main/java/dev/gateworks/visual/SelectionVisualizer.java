@@ -16,16 +16,15 @@ import java.util.Set;
 /**
  * Renders per-player selection feedback.
  *
- * The outer group outline communicates the region bounds. A marker at the
- * center of every selected block communicates actual membership, so removing
- * a block from the middle of a cuboid is immediately visible as a missing marker.
+ * Every selected block is outlined individually. Shared edges are drawn once,
+ * while interior boundaries remain visible so holes in a cuboid can be seen.
  * No world blocks are changed and particles are sent only to the selecting player.
  */
 public final class SelectionVisualizer {
     private static final long REFRESH_TICKS = 10L;
     private static final double PARTICLE_SPACING = 0.5;
     private static final int MAX_POINTS_PER_EDGE = 400;
-    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 24000;
+    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 50000;
 
     private final JavaPlugin plugin;
     private final SelectionService selections;
@@ -55,14 +54,15 @@ public final class SelectionVisualizer {
             if (session.getBlockCount() == 0) continue;
 
             int[] emitted = {0};
+            Set<EdgeKey> drawnEdges = new java.util.HashSet<>();
             for (Set<BlockPosition> group : session.getGroupsSnapshot()) {
                 if (emitted[0] >= MAX_PARTICLES_PER_PLAYER_PER_REFRESH) break;
-                renderGroup(player, group, emitted);
+                renderGroup(player, group, emitted, drawnEdges);
             }
         }
     }
 
-    private void renderGroup(Player player, Set<BlockPosition> group, int[] emitted) {
+    private void renderGroup(Player player, Set<BlockPosition> group, int[] emitted, Set<EdgeKey> drawnEdges) {
         if (group.isEmpty()) return;
         BlockPosition first = group.iterator().next();
         World world = Bukkit.getWorld(first.worldId());
@@ -75,19 +75,30 @@ public final class SelectionVisualizer {
             if (emitted[0] >= MAX_PARTICLES_PER_PLAYER_PER_REFRESH) return;
             double x0 = block.x(), y0 = block.y(), z0 = block.z();
             double x1 = x0 + 1, y1 = y0 + 1, z1 = z0 + 1;
-            line(player, world, x0, y0, z0, x1, y0, z0, emitted);
-            line(player, world, x0, y0, z1, x1, y0, z1, emitted);
-            line(player, world, x0, y1, z0, x1, y1, z0, emitted);
-            line(player, world, x0, y1, z1, x1, y1, z1, emitted);
-            line(player, world, x0, y0, z0, x0, y1, z0, emitted);
-            line(player, world, x1, y0, z0, x1, y1, z0, emitted);
-            line(player, world, x0, y0, z1, x0, y1, z1, emitted);
-            line(player, world, x1, y0, z1, x1, y1, z1, emitted);
-            line(player, world, x0, y0, z0, x0, y0, z1, emitted);
-            line(player, world, x1, y0, z0, x1, y0, z1, emitted);
-            line(player, world, x0, y1, z0, x0, y1, z1, emitted);
-            line(player, world, x1, y1, z0, x1, y1, z1, emitted);
+            edge(player, world, block.x(), block.y(), block.z(), block.x() + 1, block.y(), block.z(), emitted, drawnEdges);
+            edge(player, world, block.x(), block.y(), block.z() + 1, block.x() + 1, block.y(), block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x(), block.y() + 1, block.z(), block.x() + 1, block.y() + 1, block.z(), emitted, drawnEdges);
+            edge(player, world, block.x(), block.y() + 1, block.z() + 1, block.x() + 1, block.y() + 1, block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x(), block.y(), block.z(), block.x(), block.y() + 1, block.z(), emitted, drawnEdges);
+            edge(player, world, block.x() + 1, block.y(), block.z(), block.x() + 1, block.y() + 1, block.z(), emitted, drawnEdges);
+            edge(player, world, block.x(), block.y(), block.z() + 1, block.x(), block.y() + 1, block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x() + 1, block.y(), block.z() + 1, block.x() + 1, block.y() + 1, block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x(), block.y(), block.z(), block.x(), block.y(), block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x() + 1, block.y(), block.z(), block.x() + 1, block.y(), block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x(), block.y() + 1, block.z(), block.x(), block.y() + 1, block.z() + 1, emitted, drawnEdges);
+            edge(player, world, block.x() + 1, block.y() + 1, block.z(), block.x() + 1, block.y() + 1, block.z() + 1, emitted, drawnEdges);
         }
+    }
+
+    private record EdgeKey(int x0, int y0, int z0, int x1, int y1, int z1) {}
+
+    private void edge(Player player, World world, int x0, int y0, int z0,
+                      int x1, int y1, int z1, int[] emitted, Set<EdgeKey> drawnEdges) {
+        EdgeKey forward = new EdgeKey(x0, y0, z0, x1, y1, z1);
+        EdgeKey reverse = new EdgeKey(x1, y1, z1, x0, y0, z0);
+        if (drawnEdges.contains(forward) || drawnEdges.contains(reverse)) return;
+        drawnEdges.add(forward);
+        line(player, world, x0, y0, z0, x1, y1, z1, emitted);
     }
 
     private void line(Player player, World world,
