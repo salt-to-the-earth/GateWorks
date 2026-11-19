@@ -11,17 +11,20 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import dev.gateworks.trigger.TriggerWorkflowService;
 
 import java.util.List;
 
 public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     private final SelectionService selections;
     private final WandItemService wandItems;
+    private final TriggerWorkflowService triggerWorkflow;
 
     public GateWorksCommand(dev.gateworks.GateWorksPlugin plugin, SelectionService selections,
-                            WandItemService wandItems) {
+                            WandItemService wandItems, TriggerWorkflowService triggerWorkflow) {
         this.selections = selections;
         this.wandItems = wandItems;
+        this.triggerWorkflow = triggerWorkflow;
     }
 
     @Override
@@ -42,9 +45,35 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             case "wand" -> giveWand(player);
             case "selection" -> showSelection(player);
             case "clear" -> clearSelection(player);
+            case "book" -> handleBook(player, args);
             default -> sendHelp(sender);
         }
         return true;
+    }
+
+
+    private void handleBook(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Use /gateworks book refresh|name|attach <trigger-id>|button <trigger-id>", NamedTextColor.YELLOW));
+            return;
+        }
+        switch (args[1].toLowerCase()) {
+            case "refresh" -> {
+                triggerWorkflow.refreshSelectionBook(player);
+                player.sendMessage(Component.text("Selection book refreshed.", NamedTextColor.GREEN));
+            }
+            case "name", "create" -> triggerWorkflow.promptForName(player);
+            case "attach" -> {
+                if (args.length < 3 || !triggerWorkflow.attachSelection(player, args[2])) {
+                    player.sendMessage(Component.text("Trigger not found. Refresh the Selection Book and choose an existing trigger.", NamedTextColor.RED));
+                }
+            }
+            case "button" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.beginButtonSelection(player, args[2]);
+            }
+            default -> player.sendMessage(Component.text("Unknown book action.", NamedTextColor.RED));
+        }
     }
 
     private void giveWand(Player player) {
@@ -82,7 +111,7 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("wand", "selection", "clear", "help").stream()
+            return List.of("wand", "selection", "clear", "book", "help").stream()
                     .filter(value -> value.startsWith(args[0].toLowerCase())).toList();
         }
         return List.of();
