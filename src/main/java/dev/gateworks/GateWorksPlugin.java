@@ -5,6 +5,8 @@ import dev.gateworks.selection.SelectionService;
 import dev.gateworks.visual.SelectionVisualizer;
 import dev.gateworks.wand.WandItemService;
 import dev.gateworks.wand.WandListener;
+import dev.gateworks.trigger.TriggerWorkflowService;
+import dev.gateworks.trigger.TriggerNamingListener;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -13,12 +15,14 @@ public final class GateWorksPlugin extends JavaPlugin {
     private SelectionService selectionService;
     private WandItemService wandItemService;
     private SelectionVisualizer selectionVisualizer;
+    private TriggerWorkflowService triggerWorkflow;
 
     @Override
     public void onEnable() {
         selectionService = new SelectionService();
         wandItemService = new WandItemService(this);
         selectionVisualizer = new SelectionVisualizer(this, selectionService);
+        triggerWorkflow = new TriggerWorkflowService(this, selectionService);
         selectionVisualizer.start();
 
         PluginCommand command = getCommand("gateworks");
@@ -28,13 +32,14 @@ public final class GateWorksPlugin extends JavaPlugin {
             return;
         }
 
-        GateWorksCommand executor = new GateWorksCommand(this, selectionService, wandItemService);
+        GateWorksCommand executor = new GateWorksCommand(this, selectionService, wandItemService, triggerWorkflow);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
         getServer().getPluginManager().registerEvents(
-                new WandListener(this, selectionService, wandItemService), this);
+                new WandListener(this, selectionService, wandItemService, triggerWorkflow), this);
+        getServer().getPluginManager().registerEvents(new TriggerNamingListener(triggerWorkflow), this);
 
-        getLogger().info("GateWorks 0.1.1 enabled. Selection highlighting is active by default.");
+        getLogger().info("GateWorks enabled. Selection tools and trigger books are active.");
     }
 
     @Override
