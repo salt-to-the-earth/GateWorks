@@ -25,7 +25,7 @@ public final class SelectionVisualizer {
     private static final long REFRESH_TICKS = 10L;
     private static final double PARTICLE_SPACING = 0.5;
     private static final int MAX_POINTS_PER_EDGE = 400;
-    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 6000;
+    private static final int MAX_PARTICLES_PER_PLAYER_PER_REFRESH = 24000;
 
     private final JavaPlugin plugin;
     private final SelectionService selections;
@@ -68,42 +68,26 @@ public final class SelectionVisualizer {
         World world = Bukkit.getWorld(first.worldId());
         if (world == null || !player.getWorld().getUID().equals(world.getUID())) return;
 
-        // A center marker for every selected block makes holes inside a region visible.
-        // This is deliberately independent of the group's outer bounding box.
+        // Outline every selected block individually. This deliberately draws
+        // internal edges as well as the outside boundary so removed interior
+        // blocks leave a clearly visible gap.
         for (BlockPosition block : group) {
             if (emitted[0] >= MAX_PARTICLES_PER_PLAYER_PER_REFRESH) return;
-            Location center = new Location(world, block.x() + 0.5, block.y() + 0.5, block.z() + 0.5);
-            player.spawnParticle(Particle.END_ROD, center, 1, 0, 0, 0, 0);
-            emitted[0]++;
+            double x0 = block.x(), y0 = block.y(), z0 = block.z();
+            double x1 = x0 + 1, y1 = y0 + 1, z1 = z0 + 1;
+            line(player, world, x0, y0, z0, x1, y0, z0, emitted);
+            line(player, world, x0, y0, z1, x1, y0, z1, emitted);
+            line(player, world, x0, y1, z0, x1, y1, z0, emitted);
+            line(player, world, x0, y1, z1, x1, y1, z1, emitted);
+            line(player, world, x0, y0, z0, x0, y1, z0, emitted);
+            line(player, world, x1, y0, z0, x1, y1, z0, emitted);
+            line(player, world, x0, y0, z1, x0, y1, z1, emitted);
+            line(player, world, x1, y0, z1, x1, y1, z1, emitted);
+            line(player, world, x0, y0, z0, x0, y0, z1, emitted);
+            line(player, world, x1, y0, z0, x1, y0, z1, emitted);
+            line(player, world, x0, y1, z0, x0, y1, z1, emitted);
+            line(player, world, x1, y1, z0, x1, y1, z1, emitted);
         }
-
-        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
-        for (BlockPosition block : group) {
-            minX = Math.min(minX, block.x());
-            minY = Math.min(minY, block.y());
-            minZ = Math.min(minZ, block.z());
-            maxX = Math.max(maxX, block.x() + 1);
-            maxY = Math.max(maxY, block.y() + 1);
-            maxZ = Math.max(maxZ, block.z() + 1);
-        }
-
-        double x0 = minX, y0 = minY, z0 = minZ;
-        double x1 = maxX, y1 = maxY, z1 = maxZ;
-        // Four vertical edges.
-        line(player, world, x0, y0, z0, x0, y1, z0, emitted);
-        line(player, world, x0, y0, z1, x0, y1, z1, emitted);
-        line(player, world, x1, y0, z0, x1, y1, z0, emitted);
-        line(player, world, x1, y0, z1, x1, y1, z1, emitted);
-        // Four edges on the lower face and four on the upper face.
-        line(player, world, x0, y0, z0, x1, y0, z0, emitted);
-        line(player, world, x0, y0, z1, x1, y0, z1, emitted);
-        line(player, world, x0, y0, z0, x0, y0, z1, emitted);
-        line(player, world, x1, y0, z0, x1, y0, z1, emitted);
-        line(player, world, x0, y1, z0, x1, y1, z0, emitted);
-        line(player, world, x0, y1, z1, x1, y1, z1, emitted);
-        line(player, world, x0, y1, z0, x0, y1, z1, emitted);
-        line(player, world, x1, y1, z0, x1, y1, z1, emitted);
     }
 
     private void line(Player player, World world,
