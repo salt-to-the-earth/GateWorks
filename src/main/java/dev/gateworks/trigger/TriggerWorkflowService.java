@@ -95,11 +95,26 @@ public final class TriggerWorkflowService {
         String id = UUID.randomUUID().toString();
         plugin.getConfig().set("triggers." + id + ".name", name);
         plugin.getConfig().set("triggers." + id + ".created-by", player.getUniqueId().toString());
-        plugin.getConfig().set("triggers." + id + ".selection-blocks", selections.get(player.getUniqueId()).getBlockCount());
+        persistSelection(player, id);
         plugin.saveConfig();
         removeSelectionBook(player);
         giveTriggerBook(player, id);
         player.sendMessage(Component.text("Created trigger '" + name + "'. Its permanent Trigger Book is in your inventory.", NamedTextColor.GREEN));
+    }
+
+    private void persistSelection(Player player, String triggerId) {
+        String base = "triggers." + triggerId + ".selection";
+        List<String> saved = new ArrayList<>();
+        int groupIndex = 0;
+        for (var group : selections.get(player.getUniqueId()).getGroupsSnapshot()) {
+            for (BlockPosition position : group) {
+                saved.add(groupIndex + "|" + position.worldId() + "|" + position.x()
+                        + "|" + position.y() + "|" + position.z());
+            }
+            groupIndex++;
+        }
+        plugin.getConfig().set(base, saved);
+        plugin.getConfig().set("triggers." + triggerId + ".selection-blocks", saved.size());
     }
 
     public boolean isNaming(UUID playerId) { return naming.containsKey(playerId); }
