@@ -3,6 +3,7 @@ package dev.gateworks.wand;
 import dev.gateworks.selection.BlockPosition;
 import dev.gateworks.selection.SelectionService;
 import dev.gateworks.selection.SelectionSession;
+import dev.gateworks.trigger.TriggerWorkflowService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Particle;
@@ -20,11 +21,13 @@ public final class WandListener implements Listener {
     private static final int MAX_CUBOID_BLOCKS = 4096;
     private final SelectionService selections;
     private final WandItemService wandItems;
+    private final TriggerWorkflowService triggerWorkflow;
 
     public WandListener(dev.gateworks.GateWorksPlugin plugin, SelectionService selections,
-                        WandItemService wandItems) {
+                        WandItemService wandItems, TriggerWorkflowService triggerWorkflow) {
         this.selections = selections;
         this.wandItems = wandItems;
+        this.triggerWorkflow = triggerWorkflow;
     }
 
     @EventHandler
@@ -44,6 +47,10 @@ public final class WandListener implements Listener {
         }
         Block clicked = event.getClickedBlock();
         if (clicked == null) return;
+        if (triggerWorkflow.isAwaitingButton(player)) {
+            triggerWorkflow.attachButton(player, clicked);
+            return;
+        }
         BlockPosition position = new BlockPosition(clicked.getWorld().getUID(),
                 clicked.getX(), clicked.getY(), clicked.getZ());
         SelectionSession session = selections.get(player.getUniqueId());
@@ -67,6 +74,7 @@ public final class WandListener implements Listener {
                 send(player, "Block added. " + session.getBlockCount() + " blocks in " + session.getGroupCount() + " groups.", NamedTextColor.GREEN);
             }
             feedback(clicked);
+            triggerWorkflow.refreshSelectionBook(player);
             return;
         }
 
@@ -82,6 +90,7 @@ public final class WandListener implements Listener {
                     removed ? NamedTextColor.GREEN : NamedTextColor.YELLOW);
         }
         feedback(clicked);
+        triggerWorkflow.refreshSelectionBook(player);
     }
 
     private void feedback(Block block) {
