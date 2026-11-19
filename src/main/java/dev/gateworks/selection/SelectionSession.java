@@ -36,6 +36,20 @@ public final class SelectionSession {
 
         UUID groupId = UUID.randomUUID();
         Set<BlockPosition> group = new LinkedHashSet<>();
+
+        // The first corner is selected before the second shift-click. Absorb that
+        // anchor group so the completed cuboid is represented as one selection group.
+        UUID anchorGroupId = groupByBlock.get(first);
+        if (anchorGroupId != null) {
+            Set<BlockPosition> anchorGroup = blocksByGroup.remove(anchorGroupId);
+            if (anchorGroup != null) {
+                for (BlockPosition member : anchorGroup) {
+                    groupByBlock.put(member, groupId);
+                    group.add(member);
+                }
+            }
+        }
+
         for (int x = Math.min(first.x(), second.x()); x <= Math.max(first.x(), second.x()); x++) {
             for (int y = Math.min(first.y(), second.y()); y <= Math.max(first.y(), second.y()); y++) {
                 for (int z = Math.min(first.z(), second.z()); z <= Math.max(first.z(), second.z()); z++) {
