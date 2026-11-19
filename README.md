@@ -6,9 +6,9 @@ GateWorks is an open-source, server-side Paper plugin for building mechanisms th
 
 Players use an ordinary, unmodified Minecraft Java client. No client-side mod is required.
 
-> **Current status: 0.1.1 — early development.** This milestone provides a selection-wand prototype with persistent visual selection outlines. It is not yet the complete automation system described below.
+> **Current status: early development.** The current milestone establishes the selection wand, written-book workflow, named trigger records, and physical button association. It is not yet the complete automation system described below.
 
-## What works in 0.1.1
+## What works in the current development build
 
 - Paper plugin bootstrap and `/gateworks` command (`/gw` alias).
 - A uniquely tagged selection wand, obtained with `/gateworks wand`.
@@ -16,18 +16,18 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 - Shift + left-click to add a cuboid between the previous selection point and the clicked block.
 - Right-click to remove one selected block.
 - Shift + right-click to remove the entire selection group containing that block.
-- **Automatic visual highlighting:** selected groups receive a particle outline, refreshed every half-second.
-- Highlighting is enabled by default in this test build and is visible only to the selecting administrator.
-- Individual selected blocks are outlined as small cubes; cuboid groups are outlined by their outer bounds.
-- `/gateworks selection` to show selection size and group count.
-- `/gateworks clear` to clear the current temporary selection and its outline.
+- Per-player particle highlighting, refreshed every half-second without modifying world blocks.
+- A temporary **Selection Book** is automatically issued when the administrator first uses the wand. It displays the current selection size and offers clickable actions.
+- The Selection Book can start creation of a named trigger or display clickable choices for existing triggers.
+- Creating or attaching a selection issues that trigger's permanent **Trigger Book** and removes the temporary Selection Book.
+- Trigger names and unique IDs are saved in the plugin configuration. Selected block coordinates and selection groups are also recorded with the trigger.
+- The Trigger Book can start button association. The administrator then uses the GateWorks wand to click the physical Minecraft button.
+- Button world and coordinates are saved with the trigger.
+- `/gateworks selection` shows selection size and group count; `/gateworks clear` clears the current temporary selection.
 - A 4,096-block limit on a single cuboid gesture.
-- Unit tests for selection grouping and removal.
 - GitHub Actions workflow to compile the plugin and run tests.
 
-**Visual feedback details:** The outline uses client-visible particles and does not place, replace, or modify any world blocks. The current prototype outlines the bounding box of each selection group. If blocks are removed from the middle of a group, its outline still follows the group's remaining outer bounds. A per-player particle budget limits rendering work for large or numerous selections.
-
-**Important limitations:** Selection data is currently in memory only and is lost when the server restarts. The book interface, trigger engine, status monitoring, action engine, HubControl integration, persistence, cooldowns, anti-spam protection, and diagnostics are not implemented yet.
+**Current limitations:** This is the framework and user-interface stage, not the automation stage. Buttons are recorded against triggers but do not activate actions yet. Trigger region coordinates and button association are persisted, while the administrator's in-progress selection workspace is temporary and is lost on server restart. The book pages are refreshed when the administrator changes the selection or uses the refresh action. Status monitoring, action execution, HubControl integration, cooldowns, anti-spam protection, and diagnostics remain future stages.
 
 ## Project goals
 
