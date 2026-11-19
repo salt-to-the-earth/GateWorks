@@ -23,7 +23,7 @@ public final class TriggerWorkflowService {
     private final SelectionService selections;
     private final NamespacedKey bookType;
     private final NamespacedKey bookId;
-    private final Map<UUID, String> naming = new HashMap<>();
+    private final Map<UUID, String> naming = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, String> awaitingButton = new HashMap<>();
 
     public TriggerWorkflowService(GateWorksPlugin plugin, SelectionService selections) {
@@ -34,14 +34,9 @@ public final class TriggerWorkflowService {
     }
 
     public void refreshSelectionBook(Player player) {
-        UUID playerId = player.getUniqueId();
-        String id = playerId.toString();
         ItemStack book = findBook(player, "selection");
-        if (book == null) {
-            book = new ItemStack(Material.WRITTEN_BOOK);
-            player.getInventory().addItem(book).values().forEach(item ->
-                    player.getWorld().dropItemNaturally(player.getLocation(), item));
-        }
+        boolean newBook = book == null;
+        if (newBook) book = new ItemStack(Material.WRITTEN_BOOK);
         ItemStack target = book;
         target.editMeta(meta -> {
             BookMeta bm = (BookMeta) meta;
@@ -49,8 +44,10 @@ public final class TriggerWorkflowService {
             bm.author(Component.text("GateWorks"));
             bm.pages(selectionPages(player));
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "selection");
-            bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
+            bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, player.getUniqueId().toString());
         });
+        if (newBook) player.getInventory().addItem(book).values().forEach(item ->
+                player.getWorld().dropItemNaturally(player.getLocation(), item));
     }
 
     private List<Component> selectionPages(Player player) {
@@ -151,26 +148,26 @@ public final class TriggerWorkflowService {
 
     public void giveTriggerBook(Player player, String id) {
         ItemStack book = findBook(player, "trigger:" + id);
-        if (book == null) {
-            book = new ItemStack(Material.WRITTEN_BOOK);
-            player.getInventory().addItem(book).values().forEach(item ->
-                    player.getWorld().dropItemNaturally(player.getLocation(), item));
-        }
-        book.editMeta(meta -> {
+        boolean newBook = book == null;
+        if (newBook) book = new ItemStack(Material.WRITTEN_BOOK);
+        ItemStack target = book;
+        target.editMeta(meta -> {
             BookMeta bm = (BookMeta) meta;
             String name = plugin.getConfig().getString("triggers." + id + ".name", "Trigger");
             bm.title(Component.text(name.length() > 32 ? name.substring(0, 32) : name));
             bm.author(Component.text("GateWorks"));
             boolean hasButton = plugin.getConfig().contains("triggers." + id + ".button.world");
             int blocks = plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0);
-            bm.pages(Component.text("GATEWORKS\n" + name + "\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Selected blocks: " + blocks + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("Activation button: " + (hasButton ? "Attached" : "Not set") + "\n\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
+            bm.pages(Component.text("GATEWORKS\\n" + name + "\\n\\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Selected blocks: " + blocks + "\\n", NamedTextColor.BLACK))
+                    .append(Component.text("Activation button: " + (hasButton ? "Attached" : "Not set") + "\\n\\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
                     .append(link("Set / change activation button", "/gateworks book button " + id))
-                    .append(Component.text("\n\nTrigger ID:\n" + id, NamedTextColor.GRAY)));
+                    .append(Component.text("\\n\\nTrigger ID:\\n" + id, NamedTextColor.GRAY)));
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
+        if (newBook) player.getInventory().addItem(book).values().forEach(item ->
+                player.getWorld().dropItemNaturally(player.getLocation(), item));
     }
 
     private Component link(String label, String command) {
