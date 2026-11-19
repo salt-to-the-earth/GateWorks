@@ -25,6 +25,7 @@ public final class TriggerWorkflowService {
     private final NamespacedKey bookId;
     private final Map<UUID, String> naming = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, String> awaitingButton = new HashMap<>();
+    private final Map<UUID, BlockPosition> pendingDevices = new HashMap<>();
 
     public TriggerWorkflowService(GateWorksPlugin plugin, SelectionService selections) {
         this.plugin = plugin;
@@ -75,6 +76,11 @@ public final class TriggerWorkflowService {
     }
 
     public void promptForName(Player player) {
+        if (!pendingDevices.containsKey(player.getUniqueId())) {
+            player.sendMessage(Component.text("[GateWorks] Select a trigger device with the wand before creating a trigger.", NamedTextColor.RED));
+            refreshSelectionBook(player);
+            return;
+        }
         naming.put(player.getUniqueId(), "new");
         player.closeInventory();
         player.sendMessage(Component.text("[GateWorks] Type the new trigger name in chat. Type cancel to stop.", NamedTextColor.GOLD));
@@ -96,6 +102,8 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set("triggers." + id + ".name", name);
         plugin.getConfig().set("triggers." + id + ".created-by", player.getUniqueId().toString());
         persistSelection(player, id);
+        persistDevice(player, id);
+        pendingDevices.remove(player.getUniqueId());
         plugin.saveConfig();
         removeSelectionBook(player);
         giveTriggerBook(player, id);
@@ -119,9 +127,32 @@ public final class TriggerWorkflowService {
 
     public boolean isNaming(UUID playerId) { return naming.containsKey(playerId); }
 
+    public void selectTriggerDevice(Player player, org.bukkit.block.Block block) {
+        BlockPosition position = new BlockPosition(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
+        pendingDevices.put(player.getUniqueId(), position);
+        player.sendMessage(Component.text("[GateWorks] Trigger device selected: " + block.getType().name() + ".", NamedTextColor.GREEN));
+        refreshSelectionBook(player);
+    }
+
+    private void persistDevice(Player player, String triggerId) {
+        BlockPosition p = pendingDevices.get(player.getUniqueId());
+        if (p == null) return;
+        String base = "triggers." + triggerId + ".device.";
+        org.bukkit.World world = plugin.getServer().getWorld(p.worldId());
+        plugin.getConfig().set(base + "world", p.worldId().toString());
+        plugin.getConfig().set(base + "x", p.x());
+        plugin.getConfig().set(base + "y", p.y());
+        plugin.getConfig().set(base + "z", p.z());
+        if (world != null) plugin.getConfig().set(base + "material", world.getBlockAt(p.x(), p.y(), p.z()).getType().name());
+    }
+
     public boolean attachSelection(Player player, String id) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return false;
-        plugin.getConfig().set("triggers." + id + ".selection-blocks", selections.get(player.getUniqueId()).getBlockCount());
+        persistSelection(player, id);
+        if (pendingDevices.containsKey(player.getUniqueId())) {
+            persistDevice(player, id);
+            pendingDevices.remove(player.getUniqueId());
+        }
         plugin.getConfig().set("triggers." + id + ".last-attached-by", player.getUniqueId().toString());
         plugin.saveConfig();
         removeSelectionBook(player);
@@ -145,16 +176,17 @@ public final class TriggerWorkflowService {
         String id = awaitingButton.get(player.getUniqueId());
         if (id == null) return false;
         String material = block.getType().name();
-        if (!material.endsWith("_BUTTON")) {
-            player.sendMessage(Component.text("That block is not a button. Click a Minecraft button with the wand.", NamedTextColor.RED));
+        if (!isTriggerDevice(block.getType())) {
+            player.sendMessage(Component.text("That block is not a supported trigger device. Select a button, lever, or pressure plate.", NamedTextColor.RED));
             return true;
         }
         awaitingButton.remove(player.getUniqueId());
-        String path = "triggers." + id + ".button.";
+        String path = "triggers." + id + ".device.";
         plugin.getConfig().set(path + "world", block.getWorld().getUID().toString());
         plugin.getConfig().set(path + "x", block.getX());
         plugin.getConfig().set(path + "y", block.getY());
         plugin.getConfig().set(path + "z", block.getZ());
+        plugin.getConfig().set(path + "material", material);
         plugin.saveConfig();
         giveTriggerBook(player, id);
         player.sendMessage(Component.text("Button attached to trigger '" + plugin.getConfig().getString("triggers." + id + ".name") + "'.", NamedTextColor.GREEN));
@@ -171,18 +203,25 @@ public final class TriggerWorkflowService {
             String name = plugin.getConfig().getString("triggers." + id + ".name", "Trigger");
             bm.title(Component.text(name.length() > 32 ? name.substring(0, 32) : name));
             bm.author(Component.text("GateWorks"));
-            boolean hasButton = plugin.getConfig().contains("triggers." + id + ".button.world");
+            boolean hasButton = plugin.getConfig().contains("triggers." + id + ".device.world");
+            String deviceType = plugin.getConfig().getString("triggers." + id + ".device.material", "Unknown");
             int blocks = plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0);
             bm.pages(Component.text("GATEWORKS\\n" + name + "\\n\\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Selected blocks: " + blocks + "\\n", NamedTextColor.BLACK))
-                    .append(Component.text("Activation button: " + (hasButton ? "Attached" : "Not set") + "\\n\\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
-                    .append(link("Set / change activation button", "/gateworks book button " + id))
+                    .append(Component.text("Trigger device: " + (hasButton ? deviceType : "Not set") + "\\n\\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
+                    .append(link("Set / change trigger device", "/gateworks book button " + id))
                     .append(Component.text("\\n\\nTrigger ID:\\n" + id, NamedTextColor.GRAY)));
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
         if (newBook) player.getInventory().addItem(book).values().forEach(item ->
                 player.getWorld().dropItemNaturally(player.getLocation(), item));
+    }
+
+    private boolean isTriggerDevice(Material material) {
+        String name = material.name();
+        return name.endsWith("_BUTTON") || material == Material.LEVER
+                || name.endsWith("_PRESSURE_PLATE") || material == Material.TRIPWIRE_HOOK;
     }
 
     private Component link(String label, String command) {
