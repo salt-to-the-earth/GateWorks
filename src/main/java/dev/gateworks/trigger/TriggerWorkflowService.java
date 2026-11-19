@@ -55,24 +55,24 @@ public final class TriggerWorkflowService {
     private List<Component> selectionPages(Player player) {
         var session = selections.get(player.getUniqueId());
         List<Component> pages = new ArrayList<>();
-        pages.add(Component.text("GATEWORKS\\nTemp Selection\\n\\n", NamedTextColor.DARK_AQUA)
-                .append(Component.text("Blocks selected: " + session.getBlockCount() + "\\n", NamedTextColor.BLACK))
-                .append(Component.text("Selection groups: " + session.getGroupCount() + "\\n\\n", NamedTextColor.BLACK))
+        pages.add(Component.text("GATEWORKS\nTemp Selection\n\n", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Blocks selected: " + session.getBlockCount() + "\n", NamedTextColor.BLACK))
+                .append(Component.text("Selection groups: " + session.getGroupCount() + "\n\n", NamedTextColor.BLACK))
                 .append(link("Refresh this page", "/gateworks book refresh"))
-                .append(Component.text("\\n\\nTurn to the next page to attach this selection to a trigger.", NamedTextColor.GRAY)));
-        Component pageTwo = Component.text("SELECTION OPTIONS\\n\\n", NamedTextColor.DARK_AQUA);
+                .append(Component.text("\n\nTurn to the next page to attach this selection to a trigger.", NamedTextColor.GRAY)));
+        Component pageTwo = Component.text("SELECTION OPTIONS\n\n", NamedTextColor.DARK_AQUA);
         String targetId = regionTargets.get(player.getUniqueId());
         if (targetId != null) {
-            pageTwo = pageTwo.append(Component.text("Editing trigger: " + plugin.getConfig().getString("triggers." + targetId + ".name", "Temp Trigger") + "\\n\\n", NamedTextColor.BLACK))
+            pageTwo = pageTwo.append(Component.text("Editing trigger: " + plugin.getConfig().getString("triggers." + targetId + ".name", "Temp Trigger") + "\n\n", NamedTextColor.BLACK))
                     .append(link("Save selection to this trigger", "/gateworks book attach " + targetId))
-                    .append(Component.text("\\n\\n", NamedTextColor.BLACK));
+                    .append(Component.text("\n\n", NamedTextColor.BLACK));
         }
-        pageTwo = pageTwo.append(Component.text("Attach selection to an existing trigger:\\n", NamedTextColor.BLACK));
+        pageTwo = pageTwo.append(Component.text("Attach selection to an existing trigger:\n", NamedTextColor.BLACK));
         int count = 0;
         for (String id : triggerIds()) {
             if (count++ >= 12) break;
             String name = plugin.getConfig().getString("triggers." + id + ".name", "Temp Trigger");
-            pageTwo = pageTwo.append(Component.text("\\n" + name + "  ", NamedTextColor.DARK_AQUA))
+            pageTwo = pageTwo.append(Component.text("\n" + name + "  ", NamedTextColor.DARK_AQUA))
                     .append(link("Attach selection", "/gateworks book attach " + id));
         }
         if (count == 0) pageTwo = pageTwo.append(Component.text("No triggers have been created yet.", NamedTextColor.GRAY));
@@ -266,12 +266,12 @@ public final class TriggerWorkflowService {
             bm.author(Component.text("GateWorks"));
             String deviceType = plugin.getConfig().getString("triggers." + id + ".device.material", "Not set");
             int blocks = plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0);
-            Component overview = Component.text("GATEWORKS\\n" + name + "\\n\\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Trigger device: " + deviceType + "\\n", NamedTextColor.BLACK))
-                    .append(Component.text("Selected blocks: " + blocks + "\\n\\n", NamedTextColor.BLACK))
-                    .append(link("Change trigger name", "/gateworks book rename " + id));
-            Component region = Component.text("REGION SELECTION\\n\\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\\n\\n", NamedTextColor.BLACK))
+            Component overview = Component.text("GATEWORKS\n" + name + "\n\n", NamedTextColor.DARK_AQUA)
+                    .append(link("Name: " + name, "/gateworks book rename " + id))
+                    .append(Component.text("\nTrigger device: " + deviceType + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("Selected blocks: " + blocks, NamedTextColor.BLACK));
+            Component region = Component.text("REGION SELECTION\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\n\n", NamedTextColor.BLACK))
                     .append(link("Change region selection", "/gateworks book edit-selection " + id));
             bm.pages(overview, region);
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
