@@ -138,6 +138,15 @@ public final class TriggerWorkflowService {
         refreshSelectionBook(player);
     }
 
+    public void clearPendingTriggerDevice(Player player) {
+        if (pendingDevices.remove(player.getUniqueId()) != null) {
+            player.sendMessage(Component.text("[GateWorks] Pending trigger device selection cleared.", NamedTextColor.YELLOW));
+            refreshSelectionBook(player);
+        } else {
+            player.sendMessage(Component.text("[GateWorks] No pending trigger device to clear.", NamedTextColor.GRAY));
+        }
+    }
+
     public boolean isTriggerDeviceBlock(org.bukkit.block.Block block) {
         Material material = block.getType();
         String name = material.name();
@@ -187,7 +196,7 @@ public final class TriggerWorkflowService {
             return;
         }
         awaitingButton.put(player.getUniqueId(), id);
-        player.sendMessage(Component.text("Use your GateWorks wand to click the physical button you want to attach.", NamedTextColor.GOLD));
+        player.sendMessage(Component.text("Use your GateWorks wand to select the trigger device you want to attach.", NamedTextColor.GOLD));
     }
 
     public boolean isAwaitingButton(Player player) { return awaitingButton.containsKey(player.getUniqueId()); }
@@ -209,7 +218,7 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set(path + "material", material);
         plugin.saveConfig();
         giveTriggerBook(player, id);
-        player.sendMessage(Component.text("Button attached to trigger '" + plugin.getConfig().getString("triggers." + id + ".name") + "'.", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Trigger device attached to trigger '" + plugin.getConfig().getString("triggers." + id + ".name") + "'.", NamedTextColor.GREEN));
         return true;
     }
 
@@ -226,11 +235,11 @@ public final class TriggerWorkflowService {
             boolean hasButton = plugin.getConfig().contains("triggers." + id + ".device.world");
             String deviceType = plugin.getConfig().getString("triggers." + id + ".device.material", "Unknown");
             int blocks = plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0);
-            bm.pages(Component.text("GATEWORKS\n" + name + "\\n\\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Selected blocks: " + blocks + "\\n", NamedTextColor.BLACK))
-                    .append(Component.text("Trigger device: " + (hasButton ? deviceType : "Not set") + "\\n\\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
+            bm.pages(Component.text("GATEWORKS\n" + name + "\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Selected blocks: " + blocks + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("Trigger device: " + (hasButton ? deviceType : "Not set") + "\n\n", hasButton ? NamedTextColor.DARK_GREEN : NamedTextColor.RED))
                     .append(link("Set / change trigger device", "/gateworks book button " + id))
-                    .append(Component.text("\\n\\nTrigger ID:\\n" + id, NamedTextColor.GRAY)));
+                    .append(Component.text("\n\nTrigger ID:\n" + id, NamedTextColor.GRAY)));
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
