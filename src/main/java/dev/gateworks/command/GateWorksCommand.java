@@ -95,17 +95,20 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
 
     private void clearSelection(Player player) {
         selections.clear(player.getUniqueId());
+        triggerWorkflow.refreshSelectionBook(player);
         player.sendMessage(Component.text("Your temporary GateWorks selection has been cleared.", NamedTextColor.GREEN));
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(Component.text("GateWorks 0.1.0 — selection prototype", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("GateWorks — selection and trigger-book framework", NamedTextColor.GOLD));
         sender.sendMessage(Component.text("/gateworks wand", NamedTextColor.YELLOW)
                 .append(Component.text(" — receive a selection wand", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/gateworks selection", NamedTextColor.YELLOW)
                 .append(Component.text(" — show current selection size", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/gateworks clear", NamedTextColor.YELLOW)
                 .append(Component.text(" — clear your temporary selection", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/gateworks book", NamedTextColor.YELLOW)
+                .append(Component.text(" — manage selection and trigger books", NamedTextColor.GRAY)));
     }
 
     @Override
