@@ -591,6 +591,10 @@ public final class TriggerWorkflowService {
     }
 
     public void giveTriggerBook(Player player, String id) {
+        if (plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0) > 0) {
+            initializeRegionMaterialDefaults(id,
+                    plugin.getConfig().getStringList("triggers." + id + ".selection"));
+        }
         ItemStack book = findBook(player, "trigger:" + id);
         boolean newBook = book == null;
         if (newBook) book = new ItemStack(Material.WRITTEN_BOOK);
