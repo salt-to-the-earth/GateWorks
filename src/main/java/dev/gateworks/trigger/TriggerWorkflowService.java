@@ -58,7 +58,10 @@ public final class TriggerWorkflowService {
     }
 
     public void refreshTriggerBook(Player player, String id) {
-        if (plugin.getConfig().contains("triggers." + id + ".name")) giveTriggerBook(player, id);
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        giveTriggerBook(player, id);
+        ItemStack updatedBook = findBook(player, "trigger:" + id);
+        if (updatedBook != null) player.openBook(updatedBook);
     }
 
     public void refreshSelectionBook(Player player) {
@@ -260,6 +263,8 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set(base + "region." + key, material.name());
         plugin.saveConfig();
         giveTriggerBook(player, id);
+        ItemStack updatedBook = findBook(player, "trigger:" + id);
+        if (updatedBook != null) player.openBook(updatedBook);
         player.sendMessage(Component.text((slot.equalsIgnoreCase("primary") ? "Primary" : "Secondary")
                 + " block type set to " + prettyMaterial(material) + ".", NamedTextColor.GREEN));
     }
@@ -292,6 +297,7 @@ public final class TriggerWorkflowService {
         } catch (IllegalArgumentException ignored) {
             plugin.getLogger().warning("Could not determine the default Primary material for trigger " + id + ".");
         }
+        plugin.saveConfig();
     }
 
     private String displayMaterial(String materialName) {
