@@ -49,9 +49,10 @@ public final class TriggerActivationListener implements Listener {
                 plugin.getConfig().set(base + "action.mode", "TOGGLE");
             }
             if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
-                plugin.getConfig().set(base + "region.runtime-secondary", false);
                 if (isStateBased(block.getType())) {
                     plugin.getConfig().set(base + "region.runtime-secondary", powered);
+                } else if (!plugin.getConfig().contains(base + "region.runtime-secondary")) {
+                    plugin.getConfig().set(base + "region.runtime-secondary", false);
                 }
             }
             if (!plugin.getConfig().contains(base + "action.single-command")) {
