@@ -210,8 +210,87 @@ public final class BlockSelectionMenu implements Listener {
         return Arrays.stream(Material.values())
                 .filter(BlockSelectionMenu::isSelectableMaterial)
                 .filter(material -> belongsTo(material, category))
-                .sorted(Comparator.comparing(BlockSelectionMenu::prettyName))
+                // Keep related blocks together, closer to the way the vanilla
+                // Creative inventory presents building materials, rather than
+                // making players hunt through a purely alphabetical list.
+                .sorted(Comparator.comparingInt((Material material) -> displayGroup(material, category))
+                        .thenComparingInt(material -> variantOrder(material, category))
+                        .thenComparing(BlockSelectionMenu::prettyName))
                 .toList();
+    }
+
+    private int displayGroup(Material material, Category category) {
+        String n = material.name();
+        if (category == Category.SPECIAL) {
+            return switch (material) {
+                case AIR -> 0;
+                case BARRIER, STRUCTURE_VOID -> 1;
+                case LIGHT -> 2;
+                case NETHER_PORTAL, END_PORTAL, END_GATEWAY, END_PORTAL_FRAME -> 3;
+                case STRUCTURE_BLOCK, JIGSAW -> 4;
+                case COMMAND_BLOCK, CHAIN_COMMAND_BLOCK, REPEATING_COMMAND_BLOCK -> 5;
+                case MOVING_PISTON, PISTON_HEAD, SPAWNER -> 6;
+                default -> 7;
+            };
+        }
+        if (category == Category.WOOD) {
+            if (n.endsWith("_LOG") || n.endsWith("_WOOD") || n.endsWith("_STEM") || n.endsWith("_HYPHAE")) return 0;
+            if (n.endsWith("_PLANKS")) return 1;
+            if (n.endsWith("_LEAVES") || n.endsWith("_SAPLING") || n.endsWith("_PROPAGULE")) return 2;
+            if (n.endsWith("_STAIRS") || n.endsWith("_SLAB")) return 3;
+            if (n.endsWith("_FENCE") || n.endsWith("_FENCE_GATE") || n.endsWith("_DOOR") || n.endsWith("_TRAPDOOR")) return 4;
+            if (n.endsWith("_BUTTON") || n.endsWith("_PRESSURE_PLATE") || n.endsWith("_SIGN") || n.endsWith("_HANGING_SIGN")) return 5;
+            return 6;
+        }
+        if (category == Category.NATURAL) {
+            if (containsAny(n, "STONE", "DEEPSLATE", "TUFF", "ANDESITE", "DIORITE", "GRANITE", "BASALT")) return 0;
+            if (containsAny(n, "DIRT", "GRASS", "MUD", "ROOTED_DIRT", "PODZOL", "MYCELIUM")) return 1;
+            if (containsAny(n, "SAND", "GRAVEL", "CLAY", "TERRACOTTA")) return 2;
+            if (containsAny(n, "ORE", "RAW_")) return 3;
+            if (containsAny(n, "ICE", "SNOW")) return 4;
+            if (containsAny(n, "LOG", "LEAVES", "SAPLING", "FLOWER", "MUSHROOM", "VINE", "MOSS", "CORAL", "KELP")) return 5;
+            return 6;
+        }
+        if (category == Category.BUILDING) {
+            if (containsAny(n, "BRICK", "STONE", "COBBLE", "DEEPSLATE", "TUFF", "BLACKSTONE", "BASALT")) return 0;
+            if (containsAny(n, "SANDSTONE", "QUARTZ", "PRISMARINE", "PURPUR", "END_STONE")) return 1;
+            if (containsAny(n, "PLANKS", "LOG", "WOOD", "STEM", "HYPHAE")) return 2;
+            if (containsAny(n, "CONCRETE", "WOOL", "TERRACOTTA", "GLASS")) return 3;
+            return 4;
+        }
+        if (category == Category.REDSTONE) {
+            if (containsAny(n, "REDSTONE", "REPEATER", "COMPARATOR", "TARGET")) return 0;
+            if (containsAny(n, "PISTON", "OBSERVER", "SLIME", "HONEY")) return 1;
+            if (containsAny(n, "DISPENSER", "DROPPER", "HOPPER", "CHEST")) return 2;
+            if (containsAny(n, "RAIL", "LEVER", "BUTTON", "PRESSURE_PLATE", "TRIPWIRE")) return 3;
+            return 4;
+        }
+        if (category == Category.FUNCTIONAL) {
+            if (containsAny(n, "CRAFTING", "FURNACE", "SMOKER", "BLAST_FURNACE", "ANVIL", "SMITHING")) return 0;
+            if (containsAny(n, "CHEST", "BARREL", "SHULKER", "ENDER_CHEST")) return 1;
+            if (containsAny(n, "TORCH", "LANTERN", "CAMPFIRE", "BEACON", "LAMP")) return 2;
+            if (containsAny(n, "BED", "DOOR", "TRAPDOOR", "LADDER", "SCAFFOLDING")) return 3;
+            return 4;
+        }
+        if (category == Category.DECORATIVE) {
+            if (containsAny(n, "WOOL", "CARPET", "CONCRETE", "TERRACOTTA", "GLAZED")) return 0;
+            if (containsAny(n, "GLASS", "PANE", "ICE")) return 1;
+            if (containsAny(n, "FLOWER", "POT", "LEAVES", "SAPLING", "MUSHROOM")) return 2;
+            if (containsAny(n, "BANNER", "CANDLE", "HEAD", "SKULL", "SIGN", "CORAL")) return 3;
+            return 4;
+        }
+        return 0;
+    }
+
+    private int variantOrder(Material material, Category category) {
+        String n = material.name();
+        // Keep each wood family and common block variants adjacent.
+        if (category == Category.WOOD || category == Category.BUILDING) {
+            String[] woods = {"OAK", "SPRUCE", "BIRCH", "JUNGLE", "ACACIA", "DARK_OAK",
+                    "MANGROVE", "CHERRY", "BAMBOO", "CRIMSON", "WARPED"};
+            for (int i = 0; i < woods.length; i++) if (n.startsWith(woods[i] + "_")) return i;
+        }
+        return 0;
     }
 
     private boolean belongsTo(Material material, Category category) {
