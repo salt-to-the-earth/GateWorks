@@ -291,7 +291,8 @@ public final class TriggerWorkflowService {
             if (world == null) return;
             Material primary = world.getBlockAt(Integer.parseInt(first[2]),
                     Integer.parseInt(first[3]), Integer.parseInt(first[4])).getType();
-            if (BlockSelectionMenu.isSelectableMaterial(primary)) {
+            if (primary.isAir()) primary = Material.AIR;
+            if (primary.isBlock()) {
                 plugin.getConfig().set(base + "primary-material", primary.name());
             }
         } catch (IllegalArgumentException ignored) {
