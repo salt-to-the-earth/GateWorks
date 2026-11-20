@@ -25,6 +25,7 @@ public final class TriggerWorkflowService {
     private final NamespacedKey bookId;
     private final Map<UUID, String> naming = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, String> regionTargets = new HashMap<>();
+    private final Map<UUID, List<String>> regionBackups = new HashMap<>();
     private final Map<UUID, String> awaitingButton = new HashMap<>();
     private final Map<UUID, BlockPosition> pendingDevices = new HashMap<>();
 
@@ -249,10 +250,85 @@ public final class TriggerWorkflowService {
 
     public void beginRegionEdit(Player player, String id) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
-        selections.get(player.getUniqueId()).clear();
+        String base = "triggers." + id + ".selection";
+        List<String> saved = plugin.getConfig().getStringList(base);
+        regionBackups.put(player.getUniqueId(), new ArrayList<>(saved));
+        SelectionSession session = selections.get(player.getUniqueId());
+        session.clear();
+        Map<Integer, List<BlockPosition>> groups = new TreeMap<>();
+        for (String entry : saved) {
+            String[] parts = entry.split("\\|");
+            if (parts.length != 5) continue;
+            try {
+                int group = Integer.parseInt(parts[0]);
+                UUID world = UUID.fromString(parts[1]);
+                groups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(
+                        new BlockPosition(world, Integer.parseInt(parts[2]), Integer.parseInt(parts[3]), Integer.parseInt(parts[4])));
+            } catch (IllegalArgumentException ignored) { }
+        }
+        groups.values().forEach(session::addGroup);
         regionTargets.put(player.getUniqueId(), id);
-        refreshSelectionBook(player);
-        player.sendMessage(Component.text("Use the wand to select the blocks for this trigger, then save from page 2 of Temp Selection.", NamedTextColor.GOLD));
+        giveTriggerBook(player, id);
+        player.sendMessage(Component.text("Existing region loaded. Modify it with the wand, then save or cancel from the Trigger Book.", NamedTextColor.GOLD));
+    }
+
+    public void saveRegionEdit(Player player, String id) {
+        if (!id.equals(regionTargets.get(player.getUniqueId()))) return;
+        persistSelection(player, id);
+        regionTargets.remove(player.getUniqueId());
+        regionBackups.remove(player.getUniqueId());
+        plugin.saveConfig();
+        giveTriggerBook(player, id);
+        player.sendMessage(Component.text("Region changes saved.", NamedTextColor.GREEN));
+    }
+
+    public void cancelRegionEdit(Player player, String id) {
+        if (!id.equals(regionTargets.get(player.getUniqueId()))) return;
+        List<String> backup = regionBackups.remove(player.getUniqueId());
+        selections.get(player.getUniqueId()).clear();
+        if (backup != null) restoreSelection(player, backup);
+        regionTargets.remove(player.getUniqueId());
+        giveTriggerBook(player, id);
+        player.sendMessage(Component.text("Region editing cancelled. The saved region was restored.", NamedTextColor.YELLOW));
+    }
+
+    private void restoreSelection(Player player, List<String> saved) {
+        Map<Integer, List<BlockPosition>> groups = new TreeMap<>();
+        for (String entry : saved) {
+            String[] parts = entry.split("\\|");
+            if (parts.length != 5) continue;
+            try {
+                groups.computeIfAbsent(Integer.parseInt(parts[0]), ignored -> new ArrayList<>()).add(
+                        new BlockPosition(UUID.fromString(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]), Integer.parseInt(parts[4])));
+            } catch (IllegalArgumentException ignored) { }
+        }
+        groups.values().forEach(selections.get(player.getUniqueId())::addGroup);
+    }
+
+    public void deleteTrigger(Player player, String id) {
+        if (!plugin.getConfig().contains("triggers." + id)) {
+            player.sendMessage(Component.text("That trigger no longer exists.", NamedTextColor.RED));
+            return;
+        }
+        plugin.getConfig().set("triggers." + id, null);
+        plugin.saveConfig();
+        removeTriggerBooks(player, id);
+        selections.get(player.getUniqueId()).clear();
+        regionTargets.remove(player.getUniqueId());
+        regionBackups.remove(player.getUniqueId());
+        pendingDevices.remove(player.getUniqueId());
+        awaitingButton.remove(player.getUniqueId());
+        player.sendMessage(Component.text("Trigger and its saved region have been deleted.", NamedTextColor.GREEN));
+    }
+
+    private void removeTriggerBooks(Player player, String id) {
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            ItemStack item = player.getInventory().getItem(slot);
+            if (item == null || item.getType() != Material.WRITTEN_BOOK) continue;
+            var pdc = item.getItemMeta().getPersistentDataContainer();
+            if ("trigger".equals(pdc.get(bookType, PersistentDataType.STRING))
+                    && id.equals(pdc.get(bookId, PersistentDataType.STRING))) player.getInventory().setItem(slot, null);
+        }
     }
 
     public void giveTriggerBook(Player player, String id) {
@@ -273,7 +349,14 @@ public final class TriggerWorkflowService {
             Component region = Component.text("REGION SELECTION\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("This trigger currently has " + blocks + " selected blocks.\n\n", NamedTextColor.BLACK))
                     .append(link("Change region selection", "/gateworks book edit-selection " + id));
-            bm.pages(overview, region);
+            Component regionControls = region.append(Component.text("\\n\\n", NamedTextColor.BLACK))
+                    .append(link("Save region changes", "/gateworks book save-region " + id))
+                    .append(Component.text("\\n", NamedTextColor.BLACK))
+                    .append(link("Cancel region changes", "/gateworks book cancel-region " + id));
+            Component danger = Component.text("TRIGGER MANAGEMENT\\n\\n", NamedTextColor.DARK_RED)
+                    .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\\n\\n", NamedTextColor.BLACK))
+                    .append(link("Delete this trigger", "/gateworks book delete " + id));
+            bm.pages(overview, regionControls, danger);
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
