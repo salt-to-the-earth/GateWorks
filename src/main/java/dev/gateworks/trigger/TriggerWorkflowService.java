@@ -165,7 +165,6 @@ public final class TriggerWorkflowService {
     public void clearPendingTriggerDevice(Player player) {
         if (pendingDevices.remove(player.getUniqueId()) != null) {
             player.sendMessage(Component.text("[GateWorks] Pending trigger device selection cleared.", NamedTextColor.YELLOW));
-            refreshSelectionBook(player);
         } else {
             player.sendMessage(Component.text("[GateWorks] No pending trigger device to clear.", NamedTextColor.GRAY));
         }
