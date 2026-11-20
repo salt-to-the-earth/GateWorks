@@ -93,9 +93,20 @@ public final class TriggerActivationListener implements Listener {
 
         plugin.getConfig().set(base + "runtime.observed-state", isPowered);
         Player actor = nearestPlayer(block);
-        if (!acceptActivation(id, base, actor)) return;
-
         String mode = plugin.getConfig().getString(base + "action.mode", "SINGLE");
+        boolean stateBased = isStateBased(block.getType());
+        boolean safeRelease = stateBased && !isPowered;
+        if (!acceptActivation(id, base, actor, safeRelease)) {
+            // Keep the logical switch aligned even when spam protection blocks
+            // an ON request. A later OFF transition must still be able to run.
+            if (stateBased && "TOGGLE".equalsIgnoreCase(mode)) {
+                plugin.getConfig().set(base + "runtime.logical-state", isPowered);
+                plugin.saveConfig();
+            }
+            return;
+        }
+
+        
         String single = clean(plugin.getConfig().getString(base + "action.single-command", ""));
         String on = clean(plugin.getConfig().getString(base + "action.on-command", ""));
         String off = clean(plugin.getConfig().getString(base + "action.off-command", ""));
@@ -127,17 +138,21 @@ public final class TriggerActivationListener implements Listener {
         plugin.saveConfig();
     }
 
-    private boolean acceptActivation(String id, String base, Player actor) {
+    private boolean acceptActivation(String id, String base, Player actor, boolean safeRelease) {
         if (!plugin.getConfig().getBoolean(base + "protection.enabled", true)) return true;
         long now = System.currentTimeMillis();
         long lockoutUntil = lockouts.getOrDefault(id, 0L);
-        if (now < lockoutUntil) {
+        if (now < lockoutUntil && !safeRelease) {
             notifyActor(actor, base, "This control is temporarily locked because of repeated activation.");
             recordAttempt(id, actor, now, base);
             return false;
         }
 
         recordAttempt(id, actor, now, base);
+        // State-device OFF transitions must always be allowed through so a
+        // pressure plate, tripwire, or lever cannot be stranded logically ON.
+        if (safeRelease) return true;
+
         long cooldown = Math.max(0L, plugin.getConfig().getLong(base + "protection.cooldown-ms", 1000L));
         long previous = lastAccepted.getOrDefault(id, 0L);
         if (now - previous < cooldown) {
