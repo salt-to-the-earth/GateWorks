@@ -26,7 +26,7 @@ public final class RegionActionService {
         String materialKey = secondary ? "secondary-material" : "primary-material";
         String materialName = plugin.getConfig().getString(base + "region." + materialKey, "");
         Material target = Material.matchMaterial(materialName == null ? "" : materialName);
-        if (target == null || !target.isBlock() || target.isAir()) {
+        if (target == null || (!target.isBlock() && target != Material.AIR)) {
             plugin.getLogger().warning("Region action for trigger " + triggerId
                     + " was not applied: " + materialKey + " is not configured as a valid block.");
             return false;
@@ -58,6 +58,14 @@ public final class RegionActionService {
                 Block block = world.getBlockAt(x, y, z);
                 if (block.getType() != target) {
                     block.setType(target, false);
+                    changed++;
+                }
+                // GateWorks uses the maximum built-in Light Block level by default.
+                if (target == Material.LIGHT
+                        && block.getBlockData() instanceof org.bukkit.block.data.type.Light light
+                        && light.getLevel() != 15) {
+                    light.setLevel(15);
+                    block.setBlockData(light, false);
                     changed++;
                 }
             } catch (IllegalArgumentException ex) {
