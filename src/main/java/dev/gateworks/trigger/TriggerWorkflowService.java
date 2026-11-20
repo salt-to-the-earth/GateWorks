@@ -255,10 +255,15 @@ public final class TriggerWorkflowService {
         return result.toString();
     }
 
+    private String displayMaterial(String materialName) {
+        Material material = Material.matchMaterial(materialName == null ? "" : materialName);
+        return material == null ? "Not configured" : prettyMaterial(material) + " (" + material.name() + ")";
+    }
+
     private Component materialCatalogPage(String id, String slot) {
         String base = "triggers." + id + ".region.";
         String key = slot.equals("primary") ? "primary-material" : "secondary-material";
-        String selected = plugin.getConfig().getString(base + key, "Not configured");
+        String selected = displayMaterial(plugin.getConfig().getString(base + key, ""));
         Component page = Component.text((slot.equals("primary") ? "PRIMARY" : "SECONDARY")
                 + " BLOCK TYPE\n\nSelected: " + selected + "\n\nChoose a block:\n", NamedTextColor.DARK_AQUA);
         Material[] choices = {
@@ -579,8 +584,8 @@ public final class TriggerWorkflowService {
                     .append(link("Save region changes", "/gateworks book save-region " + id))
                     .append(Component.text("\n", NamedTextColor.BLACK))
                     .append(link("Cancel region changes", "/gateworks book cancel-region " + id));
-            String primaryMaterial = plugin.getConfig().getString("triggers." + id + ".region.primary-material", "Not configured");
-            String secondaryMaterial = plugin.getConfig().getString("triggers." + id + ".region.secondary-material", "Not configured");
+            String primaryMaterial = displayMaterial(plugin.getConfig().getString("triggers." + id + ".region.primary-material", ""));
+            String secondaryMaterial = displayMaterial(plugin.getConfig().getString("triggers." + id + ".region.secondary-material", ""));
             Component regionAction = Component.text("ACTION 2 — BLOCK TOGGLE\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Primary: " + primaryMaterial + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Secondary: " + secondaryMaterial + "\n\n", NamedTextColor.BLACK))
