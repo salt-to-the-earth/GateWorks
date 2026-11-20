@@ -256,6 +256,9 @@ public final class BlockSelectionMenu implements Listener {
     }
 
     private static Material iconFor(Material material) {
+        // AIR is a valid region target, but ItemStack(AIR) is an empty stack
+        // and therefore has no ItemMeta. Show it with a barrier icon instead.
+        if (material == Material.AIR) return Material.BARRIER;
         if (material.isItem()) return material;
         return switch (material) {
             case AIR -> Material.BARRIER;
@@ -272,8 +275,20 @@ public final class BlockSelectionMenu implements Listener {
     }
 
     private ItemStack item(Material material, String name, String description, boolean highlight) {
-        ItemStack stack = new ItemStack(material);
+        // Keep menu controls valid even if a future icon has no item representation.
+        Material iconMaterial = material == null || material == Material.AIR || !material.isItem()
+                ? Material.BARRIER : material;
+        ItemStack stack = new ItemStack(iconMaterial);
         ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            // Defensive fallback: never let one invalid icon crash the entire menu.
+            stack = new ItemStack(Material.BARRIER);
+            meta = stack.getItemMeta();
+        }
+        if (meta == null) {
+            plugin.getLogger().warning("Could not create menu icon metadata for " + name);
+            return stack;
+        }
         meta.displayName(Component.text(name, highlight ? NamedTextColor.GREEN : NamedTextColor.AQUA));
         meta.lore(List.of(Component.text(description, NamedTextColor.GRAY)));
         stack.setItemMeta(meta);
