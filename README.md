@@ -76,7 +76,7 @@ The plugin JAR will be created in `build/libs/`.
 
 ## Installation
 
-Copy `build/libs/GateWorks-0.1.1.jar` into the Paper server's `plugins` directory and restart the server. This is an early development build; use a test server, not a production server.
+Copy `build/libs/GateWorks-0.1.0.jar` into the Paper server's `plugins` directory and restart the server. This is an early development build; use a test server, not a production server.
 
 ## Roadmap and contributing
 
