@@ -236,10 +236,10 @@ public final class TriggerWorkflowService {
             if (world == null) return;
             org.bukkit.block.Block block = world.getBlockAt(plugin.getConfig().getInt(base + "device.x"),
                     plugin.getConfig().getInt(base + "device.y"), plugin.getConfig().getInt(base + "device.z"));
-            if (block.getBlockData() instanceof org.bukkit.block.data.Powerable powerable) {
-                plugin.getConfig().set(base + "runtime.logical-state", powerable.isPowered());
-                plugin.getConfig().set(base + "runtime.observed-state", powerable.isPowered());
-            }
+            boolean powered = block.getBlockData() instanceof org.bukkit.block.data.Powerable powerable
+                    ? powerable.isPowered() : block.getBlockPower() > 0;
+            plugin.getConfig().set(base + "runtime.logical-state", powered);
+            plugin.getConfig().set(base + "runtime.observed-state", powered);
         } catch (IllegalArgumentException ignored) { }
     }
 
