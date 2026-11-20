@@ -105,7 +105,11 @@ public final class TriggerWorkflowService {
             if (edit.numeric()) {
                 try {
                     long value = Long.parseLong(rawName.trim());
-                    if (value < 0 || (edit.path().endsWith("spam-threshold") && value < 2)) throw new NumberFormatException();
+                    long minimum = edit.path().endsWith("spam-threshold") || edit.path().endsWith("spam-window-seconds")
+                            || edit.path().endsWith("lockout-seconds") ? 1L
+                            : 0L;
+                    if (edit.path().endsWith("spam-threshold")) minimum = 2L;
+                    if (value < minimum) throw new NumberFormatException();
                     plugin.getConfig().set(edit.path(), value);
                 } catch (NumberFormatException ex) {
                     pendingEdits.put(player.getUniqueId(), edit);
@@ -113,7 +117,13 @@ public final class TriggerWorkflowService {
                     return;
                 }
             } else {
-                plugin.getConfig().set(edit.path(), rawName.trim().equalsIgnoreCase("clear") ? "" : rawName.trim());
+                String value = rawName.trim().equalsIgnoreCase("clear") ? "" : rawName.trim();
+                if (value.length() > 256) {
+                    pendingEdits.put(player.getUniqueId(), edit);
+                    player.sendMessage(Component.text("Commands are limited to 256 characters. Please try again or enter CANCEL.", NamedTextColor.RED));
+                    return;
+                }
+                plugin.getConfig().set(edit.path(), value);
             }
             plugin.saveConfig();
             giveTriggerBook(player, edit.triggerId());
@@ -330,6 +340,7 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set("triggers." + id + ".last-attached-by", player.getUniqueId().toString());
         if (plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0) > 0) {
             plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
+            alignToggleToDevice(id);
         }
         plugin.saveConfig();
         removeSelectionBook(player);
@@ -381,7 +392,10 @@ public final class TriggerWorkflowService {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
         String base = "triggers." + id + ".selection";
         List<String> saved = plugin.getConfig().getStringList(base);
-        if (!saved.isEmpty()) plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
+        if (!saved.isEmpty()) {
+            plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
+            alignToggleToDevice(id);
+        }
         regionBackups.put(player.getUniqueId(), new ArrayList<>(saved));
         SelectionSession session = selections.get(player.getUniqueId());
         session.clear();
