@@ -281,7 +281,10 @@ public final class TriggerWorkflowService {
         if (!plugin.getConfig().contains(base + "secondary-material")) {
             plugin.getConfig().set(base + "secondary-material", Material.AIR.name());
         }
-        if (plugin.getConfig().contains(base + "primary-material") || savedSelection.isEmpty()) return;
+        if (plugin.getConfig().contains(base + "primary-material") || savedSelection.isEmpty()) {
+            plugin.saveConfig();
+            return;
+        }
 
         String[] first = savedSelection.get(0).split("\\|");
         if (first.length != 5) return;
@@ -292,7 +295,7 @@ public final class TriggerWorkflowService {
             Material primary = world.getBlockAt(Integer.parseInt(first[2]),
                     Integer.parseInt(first[3]), Integer.parseInt(first[4])).getType();
             if (primary.isAir()) primary = Material.AIR;
-            if (primary.isBlock()) {
+            if (primary == Material.AIR || primary.isBlock()) {
                 plugin.getConfig().set(base + "primary-material", primary.name());
             }
         } catch (IllegalArgumentException ignored) {
