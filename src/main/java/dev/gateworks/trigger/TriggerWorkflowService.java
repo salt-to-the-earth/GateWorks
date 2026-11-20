@@ -328,7 +328,7 @@ public final class TriggerWorkflowService {
             pendingDevices.remove(player.getUniqueId());
         }
         plugin.getConfig().set("triggers." + id + ".last-attached-by", player.getUniqueId().toString());
-        if (selections.get(player.getUniqueId()).getBlockCount() > 0) {
+        if (plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0) > 0) {
             plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
         }
         plugin.saveConfig();
@@ -381,6 +381,7 @@ public final class TriggerWorkflowService {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
         String base = "triggers." + id + ".selection";
         List<String> saved = plugin.getConfig().getStringList(base);
+        if (!saved.isEmpty()) plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
         regionBackups.put(player.getUniqueId(), new ArrayList<>(saved));
         SelectionSession session = selections.get(player.getUniqueId());
         session.clear();
