@@ -26,9 +26,9 @@ public final class RegionActionService {
         String materialKey = secondary ? "secondary-material" : "primary-material";
         String materialName = plugin.getConfig().getString(base + "region." + materialKey, "");
         Material target = Material.matchMaterial(materialName == null ? "" : materialName);
-        if (target == null || !target.isBlock() || !target.isSolid()) {
+        if (target == null || !target.isBlock() || target.isAir()) {
             plugin.getLogger().warning("Region action for trigger " + triggerId
-                    + " was not applied: " + materialKey + " is not configured as a valid solid block.");
+                    + " was not applied: " + materialKey + " is not configured as a valid block.");
             return false;
         }
 
