@@ -30,6 +30,7 @@ public final class TriggerWorkflowService {
     private final Map<UUID, String> awaitingButton = new HashMap<>();
     private final Map<UUID, BlockPosition> pendingDevices = new HashMap<>();
     private final Map<UUID, PendingEdit> pendingEdits = new HashMap<>();
+    private BlockSelectionMenu blockSelectionMenu;
     private record PendingEdit(String triggerId, String path, String label, boolean numeric) { }
 
     public TriggerWorkflowService(GateWorksPlugin plugin, SelectionService selections) {
@@ -37,6 +38,27 @@ public final class TriggerWorkflowService {
         this.selections = selections;
         this.bookType = new NamespacedKey(plugin, "book_type");
         this.bookId = new NamespacedKey(plugin, "book_id");
+    }
+
+    public void setBlockSelectionMenu(BlockSelectionMenu menu) {
+        this.blockSelectionMenu = menu;
+    }
+
+    public void openMaterialSelector(Player player, String id, String slot) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")
+                || plugin.getConfig().getInt("triggers." + id + ".selection-blocks", 0) < 1) {
+            player.sendMessage(Component.text("This trigger does not have a saved region.", NamedTextColor.RED));
+            return;
+        }
+        if (blockSelectionMenu == null) {
+            player.sendMessage(Component.text("The block selector is unavailable.", NamedTextColor.RED));
+            return;
+        }
+        blockSelectionMenu.open(player, id, slot);
+    }
+
+    public void refreshTriggerBook(Player player, String id) {
+        if (plugin.getConfig().contains("triggers." + id + ".name")) giveTriggerBook(player, id);
     }
 
     public void refreshSelectionBook(Player player) {
@@ -231,21 +253,15 @@ public final class TriggerWorkflowService {
             default -> null;
         };
         Material material = Material.matchMaterial(materialName);
-        if (key == null || material == null || !material.isBlock() || material.isAir()) {
-            player.sendMessage(Component.text("Choose a valid block from the GateWorks catalog.", NamedTextColor.RED));
-            return;
-        }
-        String otherKey = key.equals("primary-material") ? "secondary-material" : "primary-material";
-        String other = plugin.getConfig().getString(base + "region." + otherKey, "");
-        if (material.name().equalsIgnoreCase(other)) {
-            player.sendMessage(Component.text("Primary and secondary block types must be different.", NamedTextColor.RED));
+        if (key == null || !BlockSelectionMenu.isSelectableMaterial(material)) {
+            player.sendMessage(Component.text("Choose a valid block from the GateWorks selector.", NamedTextColor.RED));
             return;
         }
         plugin.getConfig().set(base + "region." + key, material.name());
         plugin.saveConfig();
         giveTriggerBook(player, id);
         player.sendMessage(Component.text((slot.equalsIgnoreCase("primary") ? "Primary" : "Secondary")
-                + " block type set to " + prettyMaterial(material) + " (" + material.name() + ").", NamedTextColor.GREEN));
+                + " block type set to " + prettyMaterial(material) + ".", NamedTextColor.GREEN));
     }
 
     private String prettyMaterial(Material material) {
@@ -255,28 +271,32 @@ public final class TriggerWorkflowService {
         return result.toString();
     }
 
+    private void initializeRegionMaterialDefaults(String id, List<String> savedSelection) {
+        String base = "triggers." + id + ".region.";
+        if (!plugin.getConfig().contains(base + "secondary-material")) {
+            plugin.getConfig().set(base + "secondary-material", Material.AIR.name());
+        }
+        if (plugin.getConfig().contains(base + "primary-material") || savedSelection.isEmpty()) return;
+
+        String[] first = savedSelection.get(0).split("\\|");
+        if (first.length != 5) return;
+        try {
+            UUID worldId = UUID.fromString(first[1]);
+            org.bukkit.World world = plugin.getServer().getWorld(worldId);
+            if (world == null) return;
+            Material primary = world.getBlockAt(Integer.parseInt(first[2]),
+                    Integer.parseInt(first[3]), Integer.parseInt(first[4])).getType();
+            if (BlockSelectionMenu.isSelectableMaterial(primary)) {
+                plugin.getConfig().set(base + "primary-material", primary.name());
+            }
+        } catch (IllegalArgumentException ignored) {
+            plugin.getLogger().warning("Could not determine the default Primary material for trigger " + id + ".");
+        }
+    }
+
     private String displayMaterial(String materialName) {
         Material material = Material.matchMaterial(materialName == null ? "" : materialName);
         return material == null ? "Not configured" : prettyMaterial(material) + " (" + material.name() + ")";
-    }
-
-    private Component materialCatalogPage(String id, String slot) {
-        String base = "triggers." + id + ".region.";
-        String key = slot.equals("primary") ? "primary-material" : "secondary-material";
-        String selected = displayMaterial(plugin.getConfig().getString(base + key, ""));
-        Component page = Component.text((slot.equals("primary") ? "PRIMARY" : "SECONDARY")
-                + " BLOCK TYPE\n\nSelected: " + selected + "\n\nChoose a block:\n", NamedTextColor.DARK_AQUA);
-        Material[] choices = {
-                Material.STONE, Material.COBBLESTONE, Material.STONE_BRICKS, Material.MOSSY_STONE_BRICKS,
-                Material.BRICKS, Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.GLASS
-        };
-        for (Material material : choices) {
-            page = page.append(link(prettyMaterial(material) + " (" + material.name() + ")",
-                    "/gateworks book material " + id + " " + slot + " " + material.name()))
-                    .append(Component.text("\n", NamedTextColor.BLACK));
-        }
-        page = page.append(Component.text("\nOther block types can be added to the catalog in a later update.", NamedTextColor.GRAY));
-        return page;
     }
 
     public void toggleProtection(Player player, String id) {
@@ -410,6 +430,7 @@ public final class TriggerWorkflowService {
             return false;
         }
         persistSelection(player, id);
+        initializeRegionMaterialDefaults(id, plugin.getConfig().getStringList("triggers." + id + ".selection"));
         selections.get(player.getUniqueId()).clear();
         regionTargets.remove(player.getUniqueId());
         if (pendingDevices.containsKey(player.getUniqueId())) {
@@ -472,6 +493,7 @@ public final class TriggerWorkflowService {
         String base = "triggers." + id + ".selection";
         List<String> saved = plugin.getConfig().getStringList(base);
         if (!saved.isEmpty()) {
+            initializeRegionMaterialDefaults(id, saved);
             plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
             alignToggleToDevice(id);
         }
@@ -576,7 +598,7 @@ public final class TriggerWorkflowService {
             Component region = Component.text("REGION PREVIEW\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Selected blocks: " + blocks + "\n\n", NamedTextColor.BLACK))
                     .append(selectionPreview(id))
-                    .append(Component.text("\n\nFor 3D selections, enable Grid Illumination to see the complete shape in the world.", NamedTextColor.GRAY));
+                    .append(Component.text("\n\nUse the wand to review the complete selection in the world.", NamedTextColor.GRAY));
             Component regionControls = Component.text("REGION EDITING\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Edit the saved selection with your GateWorks wand.\n\n", NamedTextColor.BLACK))
                     .append(link("Edit region selection", "/gateworks book edit-selection " + id))
@@ -587,11 +609,11 @@ public final class TriggerWorkflowService {
             String primaryMaterial = displayMaterial(plugin.getConfig().getString("triggers." + id + ".region.primary-material", ""));
             String secondaryMaterial = displayMaterial(plugin.getConfig().getString("triggers." + id + ".region.secondary-material", ""));
             Component regionAction = Component.text("ACTION 2 — BLOCK TOGGLE\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Primary: " + primaryMaterial + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("Secondary: " + secondaryMaterial + "\n\n", NamedTextColor.BLACK))
-                    .append(Component.text("Every selected position is replaced with the secondary material when ON, and the primary material when OFF.\n\n", NamedTextColor.GRAY))
-                    .append(Component.text("Turn to the next page to choose the Primary Block Type.\n\n", NamedTextColor.BLUE))
-                    .append(Component.text("The following page lets you choose the Secondary Block Type.", NamedTextColor.BLUE));
+                    .append(link("Primary: " + primaryMaterial, "/gateworks book material-menu " + id + " primary"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Secondary: " + secondaryMaterial, "/gateworks book material-menu " + id + " secondary"))
+                    .append(Component.text("\n\nEvery selected position is replaced with the Secondary material when ON, and the Primary material when OFF.\n\n", NamedTextColor.GRAY))
+                    .append(Component.text("Click either material to open the block selector.", NamedTextColor.BLUE));
             String actionMode = plugin.getConfig().getString("triggers." + id + ".action.mode", "SINGLE");
             String singleCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!"));
             String onCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!"));
@@ -632,7 +654,6 @@ public final class TriggerWorkflowService {
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
             if (blocks > 0) {
                 bm.pages(overview, region, regionControls, regionAction,
-                        materialCatalogPage(id, "primary"), materialCatalogPage(id, "secondary"),
                         actions, protection, protectionDetails, danger);
             } else {
                 bm.pages(overview, region, regionControls, actions, protection, protectionDetails, danger);
@@ -669,7 +690,7 @@ public final class TriggerWorkflowService {
         if (entries.isEmpty() || firstY == Integer.MAX_VALUE) return Component.text("No region saved yet.", NamedTextColor.GRAY);
         Component preview = Component.text("Preview (Y=" + firstY + ")\n", NamedTextColor.DARK_AQUA);
         int width = maxX - minX + 1, depth = maxZ - minZ + 1;
-        if (width > 12 || depth > 12) return preview.append(Component.text("Selection is too large for a book grid. Use Grid Illumination.", NamedTextColor.GRAY));
+        if (width > 12 || depth > 12) return preview.append(Component.text("Selection is too large for a book grid. Review it with the wand in the world.", NamedTextColor.GRAY));
         Set<String> firstLayer = layers.getOrDefault(firstY, Set.of());
         for (int z = minZ; z <= maxZ; z++) {
             for (int x = minX; x <= maxX; x++) {
