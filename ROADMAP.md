@@ -24,11 +24,15 @@ This roadmap distinguishes implemented behavior from planned work. Milestone sco
 
 ## 0.3.0 — trigger and action engine
 
-- Model physical triggers separately from regions and actions.
-- Add trigger request actions for OFF-to-ON and ON-to-OFF interactions.
-- Add state-transition actions that run when confirmed state changes.
-- Add safe transitional-state handling to prevent conflicting requests.
-- Add server-side configuration persistence and validation.
+- [x] Model physical trigger devices separately from region selections and command actions.
+- [x] Add single-command and ON/OFF command-toggle configuration through the Trigger Book.
+- [x] Execute configured commands as the server console.
+- [x] Initialize state-based toggle alignment from the physical device without executing an action.
+- [x] Add initial per-trigger cooldown and repeated-activation lockout controls.
+- [ ] Add region resource toggling and combined command-plus-region execution.
+- [ ] Add listener coordination, delays, and requested/observed/applied state transitions.
+- [ ] Add safe transitional-state handling and confirmed action outcomes.
+- [ ] Expand protection responses to safe control disable/restore and optional player consequences.
 
 ## 0.4.0 — status providers
 
