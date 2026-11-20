@@ -40,6 +40,24 @@ public final class TriggerActivationListener implements Listener {
             Block block = configuredBlock(base);
             if (block == null) continue;
             boolean powered = readPowered(block);
+            if (!plugin.getConfig().contains(base + "action.mode")) {
+                plugin.getConfig().set(base + "action.mode", isStateBased(block.getType()) ? "TOGGLE" : "SINGLE");
+            }
+            if (!plugin.getConfig().contains(base + "action.single-command")) {
+                plugin.getConfig().set(base + "action.single-command", "say GateWorks says hello!");
+            }
+            if (!plugin.getConfig().contains(base + "action.on-command")) {
+                plugin.getConfig().set(base + "action.on-command", "say GateWorks is ON!");
+            }
+            if (!plugin.getConfig().contains(base + "action.off-command")) {
+                plugin.getConfig().set(base + "action.off-command", "say GateWorks is OFF!");
+            }
+            plugin.getConfig().set(base + "protection.enabled", plugin.getConfig().getBoolean(base + "protection.enabled", true));
+            plugin.getConfig().set(base + "protection.cooldown-ms", plugin.getConfig().getLong(base + "protection.cooldown-ms", 1000L));
+            plugin.getConfig().set(base + "protection.spam-threshold", plugin.getConfig().getInt(base + "protection.spam-threshold", 5));
+            plugin.getConfig().set(base + "protection.spam-window-seconds", plugin.getConfig().getLong(base + "protection.spam-window-seconds", 10L));
+            plugin.getConfig().set(base + "protection.lockout-seconds", plugin.getConfig().getLong(base + "protection.lockout-seconds", 15L));
+            plugin.getConfig().set(base + "protection.notify-player", plugin.getConfig().getBoolean(base + "protection.notify-player", true));
             plugin.getConfig().set(base + "runtime.observed-state", powered);
             if (isStateBased(block.getType())
                     && "TOGGLE".equalsIgnoreCase(plugin.getConfig().getString(base + "action.mode", "SINGLE"))) {
@@ -90,9 +108,17 @@ public final class TriggerActivationListener implements Listener {
             plugin.getConfig().set(base + "runtime.logical-state", nextState);
             dispatch(nextState ? on : off);
         } else {
-            // A single configured command is deliberately non-toggling, even
-            // when the administrator has selected a state-based device.
-            String command = !single.isEmpty() ? single : (!on.isEmpty() ? on : off);
+            // With only one populated ON/OFF command, it behaves as a single
+            // command on every activation. The dedicated single command is
+            // used only while the trigger is in SINGLE mode.
+            String command;
+            if ("TOGGLE".equalsIgnoreCase(mode)) {
+                if (!on.isEmpty() && off.isEmpty()) command = on;
+                else if (on.isEmpty() && !off.isEmpty()) command = off;
+                else command = "";
+            } else {
+                command = single;
+            }
             if (!command.isEmpty()) dispatch(command);
         }
         plugin.saveConfig();
