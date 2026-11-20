@@ -54,14 +54,27 @@ public final class TriggerWorkflowService {
             player.sendMessage(Component.text("The block selector is unavailable.", NamedTextColor.RED));
             return;
         }
-        blockSelectionMenu.open(player, id, slot);
+        // Book click commands execute while the client still displays the book screen.
+        // Defer the inventory transition until the command has returned to the server loop.
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            player.closeInventory();
+            blockSelectionMenu.open(player, id, slot);
+        });
     }
 
     public void refreshTriggerBook(Player player, String id) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
         giveTriggerBook(player, id);
-        ItemStack updatedBook = findBook(player, "trigger:" + id);
-        if (updatedBook != null) player.openBook(updatedBook);
+        scheduleTriggerBookOpen(player, id);
+    }
+
+    private void scheduleTriggerBookOpen(Player player, String id) {
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            ItemStack updatedBook = findBook(player, "trigger:" + id);
+            if (updatedBook != null) player.openBook(updatedBook);
+        });
     }
 
     public void refreshSelectionBook(Player player) {
@@ -263,8 +276,7 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set(base + "region." + key, material.name());
         plugin.saveConfig();
         giveTriggerBook(player, id);
-        ItemStack updatedBook = findBook(player, "trigger:" + id);
-        if (updatedBook != null) player.openBook(updatedBook);
+        scheduleTriggerBookOpen(player, id);
         player.sendMessage(Component.text((slot.equalsIgnoreCase("primary") ? "Primary" : "Secondary")
                 + " block type set to " + prettyMaterial(material) + ".", NamedTextColor.GREEN));
     }
