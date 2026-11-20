@@ -15,6 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import dev.gateworks.GateWorksPlugin;
 import dev.gateworks.selection.SelectionService;
 import dev.gateworks.selection.BlockPosition;
+import dev.gateworks.selection.SelectionSession;
 import java.util.*;
 
 /** First-stage book workflow and server-side trigger registry. */
@@ -148,7 +149,6 @@ public final class TriggerWorkflowService {
         }
         pendingDevices.put(player.getUniqueId(), position);
         giveTriggerBook(player, id);
-        refreshSelectionBook(player);
     }
 
     private String findTriggerAt(BlockPosition position) {
@@ -246,6 +246,13 @@ public final class TriggerWorkflowService {
         giveTriggerBook(player, id);
         player.sendMessage(Component.text("Trigger device attached to trigger '" + plugin.getConfig().getString("triggers." + id + ".name") + "'.", NamedTextColor.GREEN));
         return true;
+    }
+
+    public boolean isEditingRegion(Player player) { return regionTargets.containsKey(player.getUniqueId()); }
+
+    public void refreshTriggerBook(Player player) {
+        String id = regionTargets.get(player.getUniqueId());
+        if (id != null) giveTriggerBook(player, id);
     }
 
     public void beginRegionEdit(Player player, String id) {
