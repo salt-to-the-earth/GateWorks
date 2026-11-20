@@ -29,7 +29,11 @@ This roadmap distinguishes implemented behavior from planned work. Milestone sco
 - [x] Execute configured commands as the server console.
 - [x] Initialize state-based toggle alignment from the physical device without executing an action.
 - [x] Add initial per-trigger cooldown and repeated-activation lockout controls.
-- [ ] Add region resource toggling and combined command-plus-region execution.
+- [x] Add two-material region toggling and combined command-plus-region execution.
+- [x] Add Primary and Secondary material configuration to the Trigger Book.
+- [x] Separate region preview from region editing controls.
+- [ ] Expand the curated solid-block material catalog.
+- [ ] Add structure-template swapping as a future action type (backend architecture only for now).
 - [ ] Add listener coordination, delays, and requested/observed/applied state transitions.
 - [ ] Add safe transitional-state handling and confirmed action outcomes.
 - [ ] Expand protection responses to safe control disable/restore and optional player consequences.
