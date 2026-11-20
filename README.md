@@ -22,12 +22,15 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 - Creating or attaching a selection issues that trigger's permanent **Trigger Book** and removes the temporary Selection Book.
 - Trigger names and unique IDs are saved in the plugin configuration. Selected block coordinates and selection groups are also recorded with the trigger.
 - The Trigger Book can reissue itself when its physical trigger device is selected again with the wand. Its region page starts a fresh region-editing session. Attaching a selection saves its block coordinates and groups, clears the active selection, and removes the Temp Selection book.
-- Button world and coordinates are saved with the trigger.
+- Button, lever, pressure-plate, and tripwire-hook device coordinates are saved with each trigger.
+- The Trigger Book includes a command-action page: buttons default to one command, while state-based devices default to an ON/OFF command toggle. Administrators can change the mode and edit commands from the book.
+- Commands execute as the server console. Pulse devices act on their rising edge; state-based devices use their physical ON/OFF transitions when configured for toggle mode. Existing state is synchronized at startup without executing a command.
+- Every Temp Trigger Book includes spam-protection controls. The initial protection implementation provides a configurable per-trigger cooldown, per-player repeated-attempt threshold/window, temporary activation lockout, and optional player notification.
 - `/gateworks selection` shows selection size and group count; `/gateworks clear` clears the current temporary selection.
 - A 4,096-block limit on a single cuboid gesture.
 - GitHub Actions workflow to compile the plugin and run tests.
 
-**Current limitations:** This is the framework and user-interface stage, not the automation stage. Buttons are recorded against triggers but do not activate actions yet. Trigger region coordinates and button association are persisted, while the administrator's in-progress selection workspace is temporary and is lost on server restart. The book pages are refreshed when the administrator changes the selection or uses the refresh action. The visualizer draws individual block perimeters and may cap particle output for performance on very large selections. Status monitoring, action execution, HubControl integration, cooldowns, anti-spam protection, and diagnostics remain future stages.
+**Current limitations:** This is the framework and user-interface stage, not the automation stage. The first command-action path and basic activation protection are now implemented, but this is not yet the complete automation system. Region resource toggling (Action 2), external status monitoring/listener delays, HubControl integration, confirmed action outcomes, temporary control removal/restoration, player-harm responses, and diagnostics remain future stages. Redstone-event player attribution for notifications is best-effort because Bukkit's redstone event does not identify the activating player. Trigger region coordinates are persisted, while the administrator's in-progress selection workspace is temporary and is lost when the server restarts. The book-page overflow correction for the region preview is also still pending. The visualizer draws individual block perimeters and may cap particle output for performance on very large selections.
 
 ## Project goals
 
