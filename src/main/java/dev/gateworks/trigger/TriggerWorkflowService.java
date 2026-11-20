@@ -231,8 +231,8 @@ public final class TriggerWorkflowService {
             default -> null;
         };
         Material material = Material.matchMaterial(materialName);
-        if (key == null || material == null || !material.isBlock() || !material.isSolid()) {
-            player.sendMessage(Component.text("Choose a valid solid block from the GateWorks catalog.", NamedTextColor.RED));
+        if (key == null || material == null || !material.isBlock() || material.isAir()) {
+            player.sendMessage(Component.text("Choose a valid block from the GateWorks catalog.", NamedTextColor.RED));
             return;
         }
         String otherKey = key.equals("primary-material") ? "secondary-material" : "primary-material";
