@@ -219,6 +219,63 @@ public final class TriggerWorkflowService {
         giveTriggerBook(player, id);
     }
 
+    public void selectRegionMaterial(Player player, String id, String slot, String materialName) {
+        String base = "triggers." + id + ".";
+        if (!plugin.getConfig().contains(base + "name") || plugin.getConfig().getInt(base + "selection-blocks", 0) < 1) {
+            player.sendMessage(Component.text("This trigger does not have a saved region.", NamedTextColor.RED));
+            return;
+        }
+        String key = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "primary" -> "primary-material";
+            case "secondary" -> "secondary-material";
+            default -> null;
+        };
+        Material material = Material.matchMaterial(materialName);
+        if (key == null || material == null || !material.isBlock() || !material.isSolid()) {
+            player.sendMessage(Component.text("Choose a valid solid block from the GateWorks catalog.", NamedTextColor.RED));
+            return;
+        }
+        String otherKey = key.equals("primary-material") ? "secondary-material" : "primary-material";
+        String other = plugin.getConfig().getString(base + "region." + otherKey, "");
+        if (material.name().equalsIgnoreCase(other)) {
+            player.sendMessage(Component.text("Primary and secondary block types must be different.", NamedTextColor.RED));
+            return;
+        }
+        plugin.getConfig().set(base + "region." + key, material.name());
+        plugin.saveConfig();
+        giveTriggerBook(player, id);
+        player.sendMessage(Component.text((slot.equalsIgnoreCase("primary") ? "Primary" : "Secondary")
+                + " block type set to " + prettyMaterial(material) + " (" + material.name() + ").", NamedTextColor.GREEN));
+    }
+
+    private String prettyMaterial(Material material) {
+        String[] words = material.name().toLowerCase(Locale.ROOT).split("_");
+        StringJoiner result = new StringJoiner(" ");
+        for (String word : words) result.add(Character.toUpperCase(word.charAt(0)) + word.substring(1));
+        return result.toString();
+    }
+
+    private Component materialCatalogPage(String id, String slot) {
+        String base = "triggers." + id + ".region.";
+        String key = slot.equals("primary") ? "primary-material" : "secondary-material";
+        String selected = plugin.getConfig().getString(base + key, "Not configured");
+        Component page = Component.text((slot.equals("primary") ? "PRIMARY" : "SECONDARY")
+                + " BLOCK TYPE\n\nSelected: " + selected + "\n\nChoose a block:\n", NamedTextColor.DARK_AQUA);
+        Material[] choices = {
+                Material.STONE, Material.COBBLESTONE, Material.STONE_BRICKS, Material.MOSSY_STONE_BRICKS,
+                Material.BRICKS, Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.DARK_OAK_PLANKS,
+                Material.GLASS, Material.WHITE_CONCRETE, Material.QUARTZ_BLOCK, Material.SANDSTONE,
+                Material.DEEPSLATE_BRICKS, Material.POLISHED_DEEPSLATE, Material.MOSS_BLOCK, Material.NETHER_BRICKS
+        };
+        for (Material material : choices) {
+            page = page.append(link(prettyMaterial(material) + " (" + material.name() + ")",
+                    "/gateworks book material " + id + " " + slot + " " + material.name()))
+                    .append(Component.text("\n", NamedTextColor.BLACK));
+        }
+        page = page.append(Component.text("\nOther block types can be added to the catalog in a later update.", NamedTextColor.GRAY));
+        return page;
+    }
+
     public void toggleProtection(Player player, String id) {
         String path = "triggers." + id + ".protection.enabled";
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
@@ -490,16 +547,26 @@ public final class TriggerWorkflowService {
                     .append(link("Name: " + name, "/gateworks book rename " + id))
                     .append(Component.text("\nTrigger device: " + deviceType + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Selected blocks: " + blocks, NamedTextColor.BLACK));
-            Component region = Component.text("REGION SELECTION\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\n\n", NamedTextColor.BLACK))
+            Component region = Component.text("REGION PREVIEW\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Selected blocks: " + blocks + "\n\n", NamedTextColor.BLACK))
                     .append(selectionPreview(id))
-                    .append(Component.text("\n\n", NamedTextColor.GRAY))
-                    .append(Component.text("For 3D selections, enable Grid Illumination to see the complete shape in the world.\n\n", NamedTextColor.GRAY))
-                    .append(link("Edit region selection", "/gateworks book edit-selection " + id));
-            Component regionControls = region.append(Component.text("\n\n", NamedTextColor.BLACK))
+                    .append(Component.text("\n\nFor 3D selections, enable Grid Illumination to see the complete shape in the world.", NamedTextColor.GRAY));
+            Component regionControls = Component.text("REGION EDITING\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Edit the saved selection with your GateWorks wand.\n\n", NamedTextColor.BLACK))
+                    .append(link("Edit region selection", "/gateworks book edit-selection " + id))
+                    .append(Component.text("\n\n", NamedTextColor.BLACK))
                     .append(link("Save region changes", "/gateworks book save-region " + id))
                     .append(Component.text("\n", NamedTextColor.BLACK))
                     .append(link("Cancel region changes", "/gateworks book cancel-region " + id));
+            String primaryMaterial = plugin.getConfig().getString("triggers." + id + ".region.primary-material", "Not configured");
+            String secondaryMaterial = plugin.getConfig().getString("triggers." + id + ".region.secondary-material", "Not configured");
+            Component regionAction = Component.text("ACTION 2 — BLOCK TOGGLE\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Primary: " + primaryMaterial + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("Secondary: " + secondaryMaterial + "\n\n", NamedTextColor.BLACK))
+                    .append(Component.text("Every selected position is replaced with the secondary material when ON, and the primary material when OFF.\n\n", NamedTextColor.GRAY))
+                    .append(link("Choose Primary Block Type", "/gateworks book material-page " + id + " primary"))
+                    .append(Component.text("\n\n", NamedTextColor.BLACK))
+                    .append(link("Choose Secondary Block Type", "/gateworks book material-page " + id + " secondary"));
             String actionMode = plugin.getConfig().getString("triggers." + id + ".action.mode", "SINGLE");
             String singleCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!"));
             String onCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!"));
@@ -538,7 +605,13 @@ public final class TriggerWorkflowService {
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
-            bm.pages(overview, regionControls, actions, protection, protectionDetails, danger);
+            if (blocks > 0) {
+                bm.pages(overview, region, regionControls, regionAction,
+                        materialCatalogPage(id, "primary"), materialCatalogPage(id, "secondary"),
+                        actions, protection, protectionDetails, danger);
+            } else {
+                bm.pages(overview, region, regionControls, actions, protection, protectionDetails, danger);
+            }
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
