@@ -263,9 +263,7 @@ public final class TriggerWorkflowService {
                 + " BLOCK TYPE\n\nSelected: " + selected + "\n\nChoose a block:\n", NamedTextColor.DARK_AQUA);
         Material[] choices = {
                 Material.STONE, Material.COBBLESTONE, Material.STONE_BRICKS, Material.MOSSY_STONE_BRICKS,
-                Material.BRICKS, Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.DARK_OAK_PLANKS,
-                Material.GLASS, Material.WHITE_CONCRETE, Material.QUARTZ_BLOCK, Material.SANDSTONE,
-                Material.DEEPSLATE_BRICKS, Material.POLISHED_DEEPSLATE, Material.MOSS_BLOCK, Material.NETHER_BRICKS
+                Material.BRICKS, Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.GLASS
         };
         for (Material material : choices) {
             page = page.append(link(prettyMaterial(material) + " (" + material.name() + ")",
@@ -564,9 +562,8 @@ public final class TriggerWorkflowService {
                     .append(Component.text("Primary: " + primaryMaterial + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Secondary: " + secondaryMaterial + "\n\n", NamedTextColor.BLACK))
                     .append(Component.text("Every selected position is replaced with the secondary material when ON, and the primary material when OFF.\n\n", NamedTextColor.GRAY))
-                    .append(link("Choose Primary Block Type", "/gateworks book material-page " + id + " primary"))
-                    .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link("Choose Secondary Block Type", "/gateworks book material-page " + id + " secondary"));
+                    .append(Component.text("Turn to the next page to choose the Primary Block Type.\n\n", NamedTextColor.BLUE))
+                    .append(Component.text("The following page lets you choose the Secondary Block Type.", NamedTextColor.BLUE));
             String actionMode = plugin.getConfig().getString("triggers." + id + ".action.mode", "SINGLE");
             String singleCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!"));
             String onCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!"));
