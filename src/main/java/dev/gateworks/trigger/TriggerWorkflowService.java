@@ -383,8 +383,27 @@ public final class TriggerWorkflowService {
         if (world != null) plugin.getConfig().set(base + "material", world.getBlockAt(p.x(), p.y(), p.z()).getType().name());
     }
 
+    private boolean selectionContainsTriggerDevice(Player player, String id) {
+        String base = "triggers." + id + ".device.";
+        String worldId = plugin.getConfig().getString(base + "world");
+        if (worldId == null) return false;
+        try {
+            BlockPosition device = new BlockPosition(UUID.fromString(worldId),
+                    plugin.getConfig().getInt(base + "x"),
+                    plugin.getConfig().getInt(base + "y"),
+                    plugin.getConfig().getInt(base + "z"));
+            return selections.get(player.getUniqueId()).contains(device);
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
     public boolean attachSelection(Player player, String id) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return false;
+        if (selectionContainsTriggerDevice(player, id)) {
+            player.sendMessage(Component.text("The trigger device itself cannot be included in its region. Remove it from the selection so GateWorks can continue to use it.", NamedTextColor.RED));
+            return false;
+        }
         persistSelection(player, id);
         selections.get(player.getUniqueId()).clear();
         regionTargets.remove(player.getUniqueId());
@@ -473,6 +492,10 @@ public final class TriggerWorkflowService {
 
     public void saveRegionEdit(Player player, String id) {
         if (!id.equals(regionTargets.get(player.getUniqueId()))) return;
+        if (selectionContainsTriggerDevice(player, id)) {
+            player.sendMessage(Component.text("The trigger device itself cannot be included in its region. Remove it from the selection, then save again.", NamedTextColor.RED));
+            return;
+        }
         persistSelection(player, id);
         regionTargets.remove(player.getUniqueId());
         regionBackups.remove(player.getUniqueId());
