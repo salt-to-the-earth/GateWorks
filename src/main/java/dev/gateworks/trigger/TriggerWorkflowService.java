@@ -353,9 +353,12 @@ public final class TriggerWorkflowService {
                     .append(link("Name: " + name, "/gateworks book rename " + id))
                     .append(Component.text("\nTrigger device: " + deviceType + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Selected blocks: " + blocks, NamedTextColor.BLACK));
-            Component region = Component.text("REGION SELECTION\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\n\n", NamedTextColor.BLACK))
-                    .append(link("Change region selection", "/gateworks book edit-selection " + id));
+            Component region = Component.text("REGION SELECTION\\n\\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("This trigger currently has " + blocks + " selected blocks.\\n\\n", NamedTextColor.BLACK))
+                    .append(selectionPreview(id))
+                    .append(Component.text("\\n\\n", NamedTextColor.GRAY))
+                    .append(Component.text("For 3D selections, enable Grid Illumination to see the complete shape in the world.\\n\\n", NamedTextColor.GRAY))
+                    .append(link("Edit region selection", "/gateworks book edit-selection " + id));
             Component regionControls = region.append(Component.text("\\n\\n", NamedTextColor.BLACK))
                     .append(link("Save region changes", "/gateworks book save-region " + id))
                     .append(Component.text("\\n", NamedTextColor.BLACK))
@@ -369,6 +372,37 @@ public final class TriggerWorkflowService {
         });
         if (newBook) player.getInventory().addItem(book).values().forEach(item ->
                 player.getWorld().dropItemNaturally(player.getLocation(), item));
+    }
+
+    private Component selectionPreview(String id) {
+        List<String> entries = plugin.getConfig().getStringList("triggers." + id + ".selection");
+        Map<Integer, Set<String>> layers = new TreeMap<>();
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        int firstY = Integer.MAX_VALUE;
+        for (String entry : entries) {
+            String[] p = entry.split("\\\\|");
+            if (p.length != 5) continue;
+            try {
+                int x = Integer.parseInt(p[2]), y = Integer.parseInt(p[3]), z = Integer.parseInt(p[4]);
+                firstY = Math.min(firstY, y);
+                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+                layers.computeIfAbsent(y, ignored -> new HashSet<>()).add(x + ":" + z);
+            } catch (NumberFormatException ignored) { }
+        }
+        if (entries.isEmpty() || firstY == Integer.MAX_VALUE) return Component.text("No region saved yet.", NamedTextColor.GRAY);
+        Component preview = Component.text("Preview (Y=" + firstY + ")\\n", NamedTextColor.DARK_AQUA);
+        int width = maxX - minX + 1, depth = maxZ - minZ + 1;
+        if (width > 12 || depth > 12) return preview.append(Component.text("Selection is too large for a book grid. Use Grid Illumination.", NamedTextColor.GRAY));
+        Set<String> firstLayer = layers.getOrDefault(firstY, Set.of());
+        for (int z = minZ; z <= maxZ; z++) {
+            for (int x = minX; x <= maxX; x++) {
+                preview = preview.append(Component.text(firstLayer.contains(x + ":" + z) ? "X" : ".", firstLayer.contains(x + ":" + z) ? NamedTextColor.DARK_GREEN : NamedTextColor.GRAY));
+            }
+            if (z < maxZ) preview = preview.append(Component.text("\\n", NamedTextColor.BLACK));
+        }
+        return preview;
     }
 
     private boolean isTriggerDevice(Material material) {
