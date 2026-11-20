@@ -43,6 +43,9 @@ public final class TriggerActivationListener implements Listener {
             if (!plugin.getConfig().contains(base + "action.mode")) {
                 plugin.getConfig().set(base + "action.mode", isStateBased(block.getType()) ? "TOGGLE" : "SINGLE");
             }
+            if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
+                plugin.getConfig().set(base + "action.mode", "TOGGLE");
+            }
             if (!plugin.getConfig().contains(base + "action.single-command")) {
                 plugin.getConfig().set(base + "action.single-command", "say GateWorks says hello!");
             }
@@ -179,7 +182,10 @@ public final class TriggerActivationListener implements Listener {
             if (!block.getWorld().getUID().toString().equals(plugin.getConfig().getString(base + "world"))) continue;
             if (block.getX() == plugin.getConfig().getInt(base + "x")
                     && block.getY() == plugin.getConfig().getInt(base + "y")
-                    && block.getZ() == plugin.getConfig().getInt(base + "z")) return id;
+                    && block.getZ() == plugin.getConfig().getInt(base + "z")) {
+                String expected = plugin.getConfig().getString(base + "material");
+                if (expected == null || expected.equals(block.getType().name())) return id;
+            }
         }
         return null;
     }
@@ -190,9 +196,11 @@ public final class TriggerActivationListener implements Listener {
         try {
             var world = Bukkit.getWorld(UUID.fromString(worldId));
             if (world == null) return null;
-            return world.getBlockAt(plugin.getConfig().getInt(base + "device.x"),
+            Block block = world.getBlockAt(plugin.getConfig().getInt(base + "device.x"),
                     plugin.getConfig().getInt(base + "device.y"),
                     plugin.getConfig().getInt(base + "device.z"));
+            String expected = plugin.getConfig().getString(base + "device.material");
+            return expected == null || expected.equals(block.getType().name()) ? block : null;
         } catch (IllegalArgumentException ignored) {
             return null;
         }
