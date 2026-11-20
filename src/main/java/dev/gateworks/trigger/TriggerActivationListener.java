@@ -103,7 +103,7 @@ public final class TriggerActivationListener implements Listener {
         long now = System.currentTimeMillis();
         long lockoutUntil = lockouts.getOrDefault(id, 0L);
         if (now < lockoutUntil) {
-            notifyActor(actor, "This control is temporarily locked because of repeated activation.");
+            notifyActor(actor, base, "This control is temporarily locked because of repeated activation.");
             recordAttempt(id, actor, now, base);
             return false;
         }
@@ -112,7 +112,7 @@ public final class TriggerActivationListener implements Listener {
         long cooldown = Math.max(0L, plugin.getConfig().getLong(base + "protection.cooldown-ms", 1000L));
         long previous = lastAccepted.getOrDefault(id, 0L);
         if (now - previous < cooldown) {
-            notifyActor(actor, "Please wait before activating this control again.");
+            notifyActor(actor, base, "Please wait before activating this control again.");
             return false;
         }
         lastAccepted.put(id, now);
@@ -136,7 +136,7 @@ public final class TriggerActivationListener implements Listener {
                     plugin.getConfig().getLong(base + "protection.lockout-seconds", 15L)) * 1000L;
             lockouts.put(id, now + lockoutMs);
             byPlayer.remove(actor.getUniqueId());
-            notifyActor(actor, "GateWorks has temporarily locked this control due to repeated activation.");
+            notifyActor(actor, base, "GateWorks has temporarily locked this control due to repeated activation.");
         }
     }
 
@@ -190,16 +190,10 @@ public final class TriggerActivationListener implements Listener {
                         b.getLocation().distanceSquared(block.getLocation()))).orElse(null);
     }
 
-    private void notifyActor(Player actor, String message) {
-        if (actor != null && plugin.getConfig().getBoolean("triggers." + findTriggerAt(actor) + ".protection.notify-player", true)) {
+    private void notifyActor(Player actor, String base, String message) {
+        if (actor != null && plugin.getConfig().getBoolean(base + "protection.notify-player", true)) {
             actor.sendMessage("§6[GateWorks] §e" + message);
         }
-    }
-
-    // Notification attribution is best-effort because Bukkit redstone events
-    // do not identify the entity that caused the signal transition.
-    private String findTriggerAt(Player ignored) {
-        return "";
     }
 
     private String clean(String command) {
