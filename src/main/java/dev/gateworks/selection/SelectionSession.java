@@ -18,6 +18,18 @@ public final class SelectionSession {
     public void setAnchor(BlockPosition anchor) { this.anchor = anchor; }
     public BlockPosition getAnchor() { return anchor; }
 
+    public void addGroup(List<BlockPosition> positions) {
+        if (positions == null || positions.isEmpty()) return;
+        UUID groupId = UUID.randomUUID();
+        Set<BlockPosition> group = new LinkedHashSet<>();
+        for (BlockPosition position : positions) {
+            if (groupByBlock.containsKey(position)) continue;
+            groupByBlock.put(position, groupId);
+            group.add(position);
+        }
+        if (!group.isEmpty()) blocksByGroup.put(groupId, group);
+    }
+
     public void addSingle(BlockPosition position) {
         if (groupByBlock.containsKey(position)) return;
         UUID groupId = UUID.randomUUID();
