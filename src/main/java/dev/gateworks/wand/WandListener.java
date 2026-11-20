@@ -79,7 +79,8 @@ public final class WandListener implements Listener {
                 send(player, "Block added. " + session.getBlockCount() + " blocks in " + session.getGroupCount() + " groups.", NamedTextColor.GREEN);
             }
             feedback(clicked);
-            triggerWorkflow.refreshSelectionBook(player);
+            if (triggerWorkflow.isEditingRegion(player)) triggerWorkflow.refreshTriggerBook(player);
+            else triggerWorkflow.refreshSelectionBook(player);
             return;
         }
 
@@ -95,7 +96,8 @@ public final class WandListener implements Listener {
                     removed ? NamedTextColor.GREEN : NamedTextColor.YELLOW);
         }
         feedback(clicked);
-        triggerWorkflow.refreshSelectionBook(player);
+        if (triggerWorkflow.isEditingRegion(player)) triggerWorkflow.refreshTriggerBook(player);
+        else triggerWorkflow.refreshSelectionBook(player);
     }
 
     private void feedback(Block block) {
