@@ -23,12 +23,14 @@ import java.util.UUID;
  */
 public final class TriggerActivationListener implements Listener {
     private final JavaPlugin plugin;
+    private final RegionActionService regionActions;
     private final Map<String, Long> lastAccepted = new HashMap<>();
     private final Map<String, Long> lockouts = new HashMap<>();
     private final Map<String, Map<UUID, AttemptWindow>> attempts = new HashMap<>();
 
     public TriggerActivationListener(JavaPlugin plugin) {
         this.plugin = plugin;
+        this.regionActions = new RegionActionService(plugin);
     }
 
     /** Synchronizes state without executing actions. Safe to call on startup. */
@@ -45,6 +47,12 @@ public final class TriggerActivationListener implements Listener {
             }
             if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
                 plugin.getConfig().set(base + "action.mode", "TOGGLE");
+            }
+            if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
+                plugin.getConfig().set(base + "region.runtime-secondary", false);
+                if (isStateBased(block.getType())) {
+                    plugin.getConfig().set(base + "region.runtime-secondary", powered);
+                }
             }
             if (!plugin.getConfig().contains(base + "action.single-command")) {
                 plugin.getConfig().set(base + "action.single-command", "say GateWorks says hello!");
@@ -134,6 +142,13 @@ public final class TriggerActivationListener implements Listener {
                 command = single;
             }
             if (!command.isEmpty()) dispatch(command);
+        }
+        if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
+            boolean secondaryState = stateBased ? isPowered
+                    : !plugin.getConfig().getBoolean(base + "region.runtime-secondary", false);
+            if (regionActions.apply(id, secondaryState)) {
+                plugin.getConfig().set(base + "region.runtime-secondary", secondaryState);
+            }
         }
         plugin.saveConfig();
     }
