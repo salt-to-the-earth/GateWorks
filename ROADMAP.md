@@ -32,7 +32,11 @@ This roadmap distinguishes implemented behavior from planned work. Milestone sco
 - [x] Add two-material region toggling and combined command-plus-region execution.
 - [x] Add Primary and Secondary material configuration to the Trigger Book.
 - [x] Separate region preview from region editing controls.
-- [ ] Expand the curated solid-block material catalog.
+- [x] Add a Creative-style, category-based inventory selector for block materials, including Air and special-purpose blocks.
+- [x] Make Primary and Secondary material names clickable from the Trigger Book and show the current selection in the selector.
+- [x] Default Primary to the first selected block's material and Secondary to Air.
+- [ ] Test the selector and special block replacement behavior on the target Paper server.
+- [ ] Reuse the selection framework for saved structure templates when template swapping is implemented.
 - [ ] Add structure-template swapping as a future action type (backend architecture only for now).
 - [ ] Add listener coordination, delays, and requested/observed/applied state transitions.
 - [ ] Add safe transitional-state handling and confirmed action outcomes.
