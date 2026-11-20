@@ -75,6 +75,18 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
                     player.sendMessage(Component.text("Trigger not found. Refresh the Selection Book and choose an existing trigger.", NamedTextColor.RED));
                 }
             }
+            case "save-region" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.saveRegionEdit(player, args[2]);
+            }
+            case "cancel-region" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.cancelRegionEdit(player, args[2]);
+            }
+            case "delete" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.deleteTrigger(player, args[2]);
+            }
             case "button" -> {
                 if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
                 else triggerWorkflow.beginButtonSelection(player, args[2]);
