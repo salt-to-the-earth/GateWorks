@@ -501,9 +501,9 @@ public final class TriggerWorkflowService {
                     .append(Component.text("\n", NamedTextColor.BLACK))
                     .append(link("Cancel region changes", "/gateworks book cancel-region " + id));
             String actionMode = plugin.getConfig().getString("triggers." + id + ".action.mode", "SINGLE");
-            String singleCommand = plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!");
-            String onCommand = plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!");
-            String offCommand = plugin.getConfig().getString("triggers." + id + ".action.off-command", "say GateWorks is OFF!");
+            String singleCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!"));
+            String onCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!"));
+            String offCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".action.off-command", "say GateWorks is OFF!"));
             Component actions = Component.text("ACTION 1 — COMMANDS\n\n", NamedTextColor.DARK_AQUA);
             if ("TOGGLE".equalsIgnoreCase(actionMode)) {
                 actions = actions.append(Component.text("Mode: ON / OFF command toggle\n\n", NamedTextColor.BLACK))
@@ -522,13 +522,13 @@ public final class TriggerWorkflowService {
             Component protection = Component.text("SPAM PROTECTION\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Status: " + (plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true) ? "Enabled" : "Disabled") + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Cooldown: " + plugin.getConfig().getLong("triggers." + id + ".protection.cooldown-ms", 1000L) + " ms\n", NamedTextColor.BLACK))
-                    .append(Component.text("Spam threshold: " + plugin.getConfig().getInt("triggers." + id + ".protection.spam-threshold", 5) + " attempts\n", NamedTextColor.BLACK))
-                    .append(Component.text("Detection window: " + plugin.getConfig().getLong("triggers." + id + ".protection.spam-window-seconds", 10L) + " seconds\n", NamedTextColor.BLACK))
-                    .append(Component.text("Lockout: " + plugin.getConfig().getLong("triggers." + id + ".protection.lockout-seconds", 15L) + " seconds\n\n", NamedTextColor.BLACK))
+                    .append(Component.text("Spam threshold: " + plugin.getConfig().getInt("triggers." + id + ".protection.spam-threshold", 5) + " attempts\n\n", NamedTextColor.BLACK))
                     .append(link("Edit cooldown", "/gateworks book protection-setting " + id + " cooldown"))
                     .append(Component.text("\n", NamedTextColor.BLACK))
-                    .append(link("Edit spam threshold", "/gateworks book protection-setting " + id + " threshold"))
-                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit spam threshold", "/gateworks book protection-setting " + id + " threshold"));
+            Component protectionDetails = Component.text("SPAM PROTECTION — SETTINGS\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Detection window: " + plugin.getConfig().getLong("triggers." + id + ".protection.spam-window-seconds", 10L) + " seconds\n", NamedTextColor.BLACK))
+                    .append(Component.text("Lockout: " + plugin.getConfig().getLong("triggers." + id + ".protection.lockout-seconds", 15L) + " seconds\n\n", NamedTextColor.BLACK))
                     .append(link("Edit detection window", "/gateworks book protection-setting " + id + " window"))
                     .append(Component.text("\n", NamedTextColor.BLACK))
                     .append(link("Edit lockout duration", "/gateworks book protection-setting " + id + " lockout"))
@@ -538,12 +538,17 @@ public final class TriggerWorkflowService {
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
-            bm.pages(overview, regionControls, actions, protection, danger);
+            bm.pages(overview, regionControls, actions, protection, protectionDetails, danger);
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
         if (newBook) player.getInventory().addItem(book).values().forEach(item ->
                 player.getWorld().dropItemNaturally(player.getLocation(), item));
+    }
+
+    private String previewCommand(String command) {
+        if (command == null || command.isBlank()) return "(empty)";
+        return command.length() > 44 ? command.substring(0, 41) + "..." : command;
     }
 
     private Component selectionPreview(String id) {
