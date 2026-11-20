@@ -29,6 +29,8 @@ public final class TriggerWorkflowService {
     private final Map<UUID, List<String>> regionBackups = new HashMap<>();
     private final Map<UUID, String> awaitingButton = new HashMap<>();
     private final Map<UUID, BlockPosition> pendingDevices = new HashMap<>();
+    private final Map<UUID, PendingEdit> pendingEdits = new HashMap<>();
+    private record PendingEdit(String triggerId, String path, String label, boolean numeric) { }
 
     public TriggerWorkflowService(GateWorksPlugin plugin, SelectionService selections) {
         this.plugin = plugin;
@@ -93,6 +95,31 @@ public final class TriggerWorkflowService {
     }
 
     public void acceptName(Player player, String rawName) {
+        PendingEdit edit = pendingEdits.remove(player.getUniqueId());
+        if (edit != null) {
+            if (rawName.equalsIgnoreCase("cancel")) {
+                player.sendMessage(Component.text("Configuration unchanged.", NamedTextColor.YELLOW));
+                giveTriggerBook(player, edit.triggerId());
+                return;
+            }
+            if (edit.numeric()) {
+                try {
+                    long value = Long.parseLong(rawName.trim());
+                    if (value < 0 || (edit.path().endsWith("spam-threshold") && value < 2)) throw new NumberFormatException();
+                    plugin.getConfig().set(edit.path(), value);
+                } catch (NumberFormatException ex) {
+                    pendingEdits.put(player.getUniqueId(), edit);
+                    player.sendMessage(Component.text("Please enter a valid whole number (threshold must be at least 2), or CANCEL.", NamedTextColor.RED));
+                    return;
+                }
+            } else {
+                plugin.getConfig().set(edit.path(), rawName.trim().equalsIgnoreCase("clear") ? "" : rawName.trim());
+            }
+            plugin.saveConfig();
+            giveTriggerBook(player, edit.triggerId());
+            player.sendMessage(Component.text(edit.label() + " updated.", NamedTextColor.GREEN));
+            return;
+        }
         String id = naming.remove(player.getUniqueId());
         if (id == null) return;
         if (rawName.equalsIgnoreCase("cancel")) {
@@ -127,7 +154,84 @@ public final class TriggerWorkflowService {
         plugin.getConfig().set("triggers." + triggerId + ".selection-blocks", saved.size());
     }
 
-    public boolean isNaming(UUID playerId) { return naming.containsKey(playerId); }
+    public boolean isNaming(UUID playerId) {
+        return naming.containsKey(playerId) || pendingEdits.containsKey(playerId);
+    }
+
+    public void promptForCommand(Player player, String id, String slot) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        String path = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "single" -> "triggers." + id + ".action.single-command";
+            case "on" -> "triggers." + id + ".action.on-command";
+            case "off" -> "triggers." + id + ".action.off-command";
+            default -> null;
+        };
+        if (path == null) return;
+        pendingEdits.put(player.getUniqueId(), new PendingEdit(id, path, slot.toUpperCase(Locale.ROOT) + " command", false));
+        player.closeInventory();
+        player.sendMessage(Component.text("[GateWorks] Enter the " + slot.toUpperCase(Locale.ROOT)
+                + " command in chat. Enter CLEAR to remove it, or CANCEL to leave it unchanged.", NamedTextColor.GOLD));
+    }
+
+    public void promptForProtectionSetting(Player player, String id, String setting) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        String key = switch (setting.toLowerCase(Locale.ROOT)) {
+            case "cooldown" -> "cooldown-ms";
+            case "threshold" -> "spam-threshold";
+            case "window" -> "spam-window-seconds";
+            case "lockout" -> "lockout-seconds";
+            default -> null;
+        };
+        if (key == null) return;
+        pendingEdits.put(player.getUniqueId(), new PendingEdit(id, "triggers." + id + ".protection." + key, setting, true));
+        player.closeInventory();
+        player.sendMessage(Component.text("[GateWorks] Enter a whole number for " + setting
+                + ". Enter CANCEL to leave it unchanged.", NamedTextColor.GOLD));
+    }
+
+    public void toggleActionMode(Player player, String id) {
+        String base = "triggers." + id + ".";
+        if (!plugin.getConfig().contains(base + "name")) return;
+        boolean hasRegion = plugin.getConfig().getInt(base + "selection-blocks", 0) > 0;
+        String current = plugin.getConfig().getString(base + "action.mode", "SINGLE");
+        if (hasRegion && "TOGGLE".equalsIgnoreCase(current)) {
+            player.sendMessage(Component.text("A trigger with a region must retain its ON/OFF command toggle.", NamedTextColor.YELLOW));
+            return;
+        }
+        String next = "TOGGLE".equalsIgnoreCase(current) ? "SINGLE" : "TOGGLE";
+        plugin.getConfig().set(base + "action.mode", next);
+        if ("TOGGLE".equals(next)) {
+            if (!plugin.getConfig().contains(base + "action.on-command")) plugin.getConfig().set(base + "action.on-command", "say GateWorks is ON!");
+            if (!plugin.getConfig().contains(base + "action.off-command")) plugin.getConfig().set(base + "action.off-command", "say GateWorks is OFF!");
+            alignToggleToDevice(id);
+        }
+        plugin.saveConfig();
+        giveTriggerBook(player, id);
+    }
+
+    public void toggleProtection(Player player, String id) {
+        String path = "triggers." + id + ".protection.enabled";
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        plugin.getConfig().set(path, !plugin.getConfig().getBoolean(path, true));
+        plugin.saveConfig();
+        giveTriggerBook(player, id);
+    }
+
+    private void alignToggleToDevice(String id) {
+        String base = "triggers." + id + ".";
+        String worldId = plugin.getConfig().getString(base + "device.world");
+        if (worldId == null) return;
+        try {
+            org.bukkit.World world = plugin.getServer().getWorld(UUID.fromString(worldId));
+            if (world == null) return;
+            org.bukkit.block.Block block = world.getBlockAt(plugin.getConfig().getInt(base + "device.x"),
+                    plugin.getConfig().getInt(base + "device.y"), plugin.getConfig().getInt(base + "device.z"));
+            if (block.getBlockData() instanceof org.bukkit.block.data.Powerable powerable) {
+                plugin.getConfig().set(base + "runtime.logical-state", powerable.isPowered());
+                plugin.getConfig().set(base + "runtime.observed-state", powerable.isPowered());
+            }
+        } catch (IllegalArgumentException ignored) { }
+    }
 
     public void selectTriggerDevice(Player player, org.bukkit.block.Block block) {
         BlockPosition position = new BlockPosition(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
@@ -142,6 +246,22 @@ public final class TriggerWorkflowService {
             plugin.getConfig().set("triggers." + id + ".device.y", position.y());
             plugin.getConfig().set("triggers." + id + ".device.z", position.z());
             plugin.getConfig().set("triggers." + id + ".device.material", block.getType().name());
+            boolean pulseDevice = block.getType().name().endsWith("_BUTTON");
+            String base = "triggers." + id + ".";
+            plugin.getConfig().set(base + "action.mode", pulseDevice ? "SINGLE" : "TOGGLE");
+            plugin.getConfig().set(base + "action.single-command", "say GateWorks says hello!");
+            plugin.getConfig().set(base + "action.on-command", "say GateWorks is ON!");
+            plugin.getConfig().set(base + "action.off-command", "say GateWorks is OFF!");
+            boolean initiallyPowered = block.getBlockData() instanceof org.bukkit.block.data.Powerable powerable
+                    && powerable.isPowered();
+            plugin.getConfig().set(base + "runtime.observed-state", initiallyPowered);
+            plugin.getConfig().set(base + "runtime.logical-state", initiallyPowered);
+            plugin.getConfig().set(base + "protection.enabled", true);
+            plugin.getConfig().set(base + "protection.cooldown-ms", 1000L);
+            plugin.getConfig().set(base + "protection.spam-threshold", 5);
+            plugin.getConfig().set(base + "protection.spam-window-seconds", 10L);
+            plugin.getConfig().set(base + "protection.lockout-seconds", 15L);
+            plugin.getConfig().set(base + "protection.notify-player", true);
             plugin.saveConfig();
             player.sendMessage(Component.text("[GateWorks] New trigger device registered. Click its name in the Temp Trigger book to name it.", NamedTextColor.GREEN));
         } else {
@@ -208,6 +328,9 @@ public final class TriggerWorkflowService {
             pendingDevices.remove(player.getUniqueId());
         }
         plugin.getConfig().set("triggers." + id + ".last-attached-by", player.getUniqueId().toString());
+        if (selections.get(player.getUniqueId()).getBlockCount() > 0) {
+            plugin.getConfig().set("triggers." + id + ".action.mode", "TOGGLE");
+        }
         plugin.saveConfig();
         removeSelectionBook(player);
         giveTriggerBook(player, id);
@@ -362,10 +485,45 @@ public final class TriggerWorkflowService {
                     .append(link("Save region changes", "/gateworks book save-region " + id))
                     .append(Component.text("\n", NamedTextColor.BLACK))
                     .append(link("Cancel region changes", "/gateworks book cancel-region " + id));
+            String actionMode = plugin.getConfig().getString("triggers." + id + ".action.mode", "SINGLE");
+            String singleCommand = plugin.getConfig().getString("triggers." + id + ".action.single-command", "say GateWorks says hello!");
+            String onCommand = plugin.getConfig().getString("triggers." + id + ".action.on-command", "say GateWorks is ON!");
+            String offCommand = plugin.getConfig().getString("triggers." + id + ".action.off-command", "say GateWorks is OFF!");
+            Component actions = Component.text("ACTION 1 — COMMANDS\n\n", NamedTextColor.DARK_AQUA);
+            if ("TOGGLE".equalsIgnoreCase(actionMode)) {
+                actions = actions.append(Component.text("Mode: ON / OFF command toggle\n\n", NamedTextColor.BLACK))
+                        .append(link("Edit ON command", "/gateworks book command " + id + " on"))
+                        .append(Component.text("\n" + (onCommand.isBlank() ? "(empty)" : onCommand) + "\n\n", NamedTextColor.DARK_GRAY))
+                        .append(link("Edit OFF command", "/gateworks book command " + id + " off"))
+                        .append(Component.text("\n" + (offCommand.isBlank() ? "(empty)" : offCommand) + "\n\n", NamedTextColor.DARK_GRAY));
+                if (blocks == 0) actions = actions.append(link("Switch to single command", "/gateworks book mode " + id));
+                else actions = actions.append(Component.text("A region requires command-toggle mode.\n", NamedTextColor.GRAY));
+            } else {
+                actions = actions.append(Component.text("Mode: Single command\n\n", NamedTextColor.BLACK))
+                        .append(link("Edit single command", "/gateworks book command " + id + " single"))
+                        .append(Component.text("\n" + (singleCommand.isBlank() ? "(empty)" : singleCommand) + "\n\n", NamedTextColor.DARK_GRAY))
+                        .append(link("Enable ON / OFF toggle", "/gateworks book mode " + id));
+            }
+            Component protection = Component.text("SPAM PROTECTION\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Status: " + (plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true) ? "Enabled" : "Disabled") + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("Cooldown: " + plugin.getConfig().getLong("triggers." + id + ".protection.cooldown-ms", 1000L) + " ms\n", NamedTextColor.BLACK))
+                    .append(Component.text("Spam threshold: " + plugin.getConfig().getInt("triggers." + id + ".protection.spam-threshold", 5) + " attempts\n", NamedTextColor.BLACK))
+                    .append(Component.text("Detection window: " + plugin.getConfig().getLong("triggers." + id + ".protection.spam-window-seconds", 10L) + " seconds\n", NamedTextColor.BLACK))
+                    .append(Component.text("Lockout: " + plugin.getConfig().getLong("triggers." + id + ".protection.lockout-seconds", 15L) + " seconds\n\n", NamedTextColor.BLACK))
+                    .append(link("Edit cooldown", "/gateworks book protection-setting " + id + " cooldown"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit spam threshold", "/gateworks book protection-setting " + id + " threshold"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit detection window", "/gateworks book protection-setting " + id + " window"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit lockout duration", "/gateworks book protection-setting " + id + " lockout"))
+                    .append(Component.text("\n\n", NamedTextColor.BLACK))
+                    .append(link(plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true)
+                            ? "Disable spam protection" : "Enable spam protection", "/gateworks book protection " + id));
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
-            bm.pages(overview, regionControls, danger);
+            bm.pages(overview, regionControls, actions, protection, danger);
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
         });
