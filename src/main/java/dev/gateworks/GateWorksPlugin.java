@@ -7,6 +7,7 @@ import dev.gateworks.wand.WandItemService;
 import dev.gateworks.wand.WandListener;
 import dev.gateworks.trigger.TriggerWorkflowService;
 import dev.gateworks.trigger.TriggerNamingListener;
+import dev.gateworks.trigger.TriggerActivationListener;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -38,8 +39,11 @@ public final class GateWorksPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new WandListener(this, selectionService, wandItemService, triggerWorkflow), this);
         getServer().getPluginManager().registerEvents(new TriggerNamingListener(triggerWorkflow), this);
+        TriggerActivationListener activationListener = new TriggerActivationListener(this);
+        getServer().getPluginManager().registerEvents(activationListener, this);
+        activationListener.initializeExistingTriggers();
 
-        getLogger().info("GateWorks enabled. Selection tools and trigger books are active.");
+        getLogger().info("GateWorks enabled. Selection tools, trigger books, and initial command actions are active.");
     }
 
     @Override
