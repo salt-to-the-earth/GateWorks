@@ -83,8 +83,8 @@ public final class BlockSelectionMenu implements Listener {
     }
 
     public static boolean isSelectableMaterial(Material material) {
-        return material != null && material.isBlock()
-                && (material.isItem() || SPECIAL_MATERIALS.contains(material));
+        return material != null && (SPECIAL_MATERIALS.contains(material)
+                || (material.isBlock() && material.isItem()));
     }
 
     public void open(Player player, String triggerId, String slot) {
@@ -262,6 +262,7 @@ public final class BlockSelectionMenu implements Listener {
             case NETHER_PORTAL -> Material.OBSIDIAN;
             case END_PORTAL -> Material.END_PORTAL_FRAME;
             case END_GATEWAY -> Material.END_STONE;
+            case LIGHT -> Material.GLOWSTONE;
             case MOVING_PISTON, PISTON_HEAD -> Material.PISTON;
             default -> Material.BARRIER;
         };
