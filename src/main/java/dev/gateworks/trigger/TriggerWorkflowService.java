@@ -729,26 +729,25 @@ public final class TriggerWorkflowService {
                             ? "Disable spam protection" : "Enable spam protection", "/gateworks book protection " + id));
             String listenerStatus = plugin.getConfig().getString("triggers." + id + ".listener.status",
                     plugin.getConfig().getBoolean("triggers." + id + ".listener.enabled", false) ? "OFFLINE" : "DISABLED");
-            String monitorCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".listener.command", ""));
-            Component listenerPage = Component.text("STATUS LISTENER\n\n", NamedTextColor.DARK_AQUA)
-                    .append(Component.text("Health: " + listenerStatus + "\n", "ONLINE".equals(listenerStatus) ? NamedTextColor.GREEN : NamedTextColor.RED))
-                    .append(Component.text("Command: " + (monitorCommand.isBlank() ? "Not configured" : monitorCommand) + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("State A (OFF): " + plugin.getConfig().getString("triggers." + id + ".listener.state-a", "0") + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("State B (ON): " + plugin.getConfig().getString("triggers." + id + ".listener.state-b", "1") + "\n", NamedTextColor.BLACK))
-                    .append(Component.text("Polling: " + plugin.getConfig().getLong("triggers." + id + ".listener.interval-seconds", 5) + " seconds\n\n", NamedTextColor.BLACK))
-                    .append(link("Edit monitoring command", "/gateworks book listener-setting " + id + " command"))
-                    .append(Component.text("\n", NamedTextColor.BLACK))
+            boolean listenerEnabled = plugin.getConfig().getBoolean("triggers." + id + ".listener.enabled", false);
+            boolean commandConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.command", "").isBlank();
+            Component listenerPage = Component.text("STATUS LISTENER\\n\\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Health: " + listenerStatus + "\\n", "ONLINE".equals(listenerStatus) ? NamedTextColor.GREEN : NamedTextColor.RED))
+                    .append(link("Monitoring command: " + (commandConfigured ? "Configured (edit)" : "Not set (edit)"),
+                            "/gateworks book listener-setting " + id + " command"))
+                    .append(Component.text("\\nState A (OFF): " + plugin.getConfig().getString("triggers." + id + ".listener.state-a", "0"), NamedTextColor.BLACK))
+                    .append(Component.text("\\nState B (ON): " + plugin.getConfig().getString("triggers." + id + ".listener.state-b", "1"), NamedTextColor.BLACK))
+                    .append(Component.text("\\nPolling: " + plugin.getConfig().getLong("triggers." + id + ".listener.interval-seconds", 5) + " sec\\n\\n", NamedTextColor.BLACK))
+                    .append(link(listenerEnabled ? "Disable listener" : "Enable listener", "/gateworks book listener " + id))
+                    .append(Component.text("\\n", NamedTextColor.BLACK))
+                    .append(link("Show latest error", "/gateworks book listener-error " + id))
+                    .append(Component.text("\\n\\n", NamedTextColor.BLACK))
                     .append(link("Edit State A response", "/gateworks book listener-setting " + id + " state-a"))
-                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(Component.text("\\n", NamedTextColor.BLACK))
                     .append(link("Edit State B response", "/gateworks book listener-setting " + id + " state-b"))
-                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(Component.text("\\n", NamedTextColor.BLACK))
                     .append(link("Edit polling interval", "/gateworks book listener-setting " + id + " interval"))
-                    .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link(plugin.getConfig().getBoolean("triggers." + id + ".listener.enabled", false)
-                            ? "Disable listener" : "Enable listener", "/gateworks book listener " + id))
-                    .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link("Show latest error in chat", "/gateworks book listener-error " + id))
-                    .append(Component.text("\n\nThe listener only observes this command. It does not run Action 1 commands. State A applies Primary/OFF; State B applies Secondary/ON. Errors preserve the last confirmed state.", NamedTextColor.GRAY));
+                    .append(Component.text("\\n\\nThe listener observes only; it never runs Action 1 commands.", NamedTextColor.GRAY));
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
