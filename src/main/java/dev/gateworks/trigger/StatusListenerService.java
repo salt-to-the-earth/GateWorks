@@ -160,7 +160,7 @@ public final class StatusListenerService {
         CommandSender sender = Bukkit.createCommandSender((Component message) -> {
             String plain = PlainTextComponentSerializer.plainText().serialize(message);
             if (plain == null || plain.isBlank()) return;
-            if (!captured.isEmpty()) captured.append('\\n');
+            if (!captured.isEmpty()) captured.append('\n');
             captured.append(plain);
         });
 
