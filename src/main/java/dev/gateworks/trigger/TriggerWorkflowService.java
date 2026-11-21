@@ -806,36 +806,36 @@ public final class TriggerWorkflowService {
     /** Issues the in-game manual; the trigger directory is always the final section. */
     public void giveHelpBook(Player player) {
         List<Component> pages = new ArrayList<>();
-        pages.add(Component.text("GATEWORKS HELP\nGETTING STARTED\\n\\n", NamedTextColor.DARK_AQUA)
-                .append(Component.text("GateWorks lets administrators configure physical triggers, command actions, monitored states, and block regions.\\n\\n", NamedTextColor.BLACK))
-                .append(Component.text("1. Get the wand: /gateworks wand\\n2. Select blocks with the wand.\\n3. Click a supported trigger device to create its Trigger Book.\\n4. Configure actions and optional regions in that book.\\n\\n", NamedTextColor.BLACK))
+        pages.add(Component.text("GATEWORKS HELP\nGETTING STARTED\n\n", NamedTextColor.DARK_AQUA)
+                .append(Component.text("GateWorks lets administrators configure physical triggers, command actions, monitored states, and block regions.\n\n", NamedTextColor.BLACK))
+                .append(Component.text("1. Get the wand: /gateworks wand\n2. Select blocks with the wand.\n3. Click a supported trigger device to create its Trigger Book.\n4. Configure actions and optional regions in that book.\n\n", NamedTextColor.BLACK))
                 .append(Component.text("Use the page arrows to move through this manual. Re-run /gateworks help to refresh the directory.", NamedTextColor.GRAY)));
-        pages.add(Component.text("COMMANDS\\n\\n", NamedTextColor.DARK_AQUA)
-                .append(Component.text("/gateworks wand — receive the selection wand\\n/gateworks selection — show selected block count\\n/gateworks clear — clear temporary selection\\n/gateworks help — open this manual\\n/gateworks book refresh — refresh the Temp Selection book\\n\\nAlias: /gw", NamedTextColor.BLACK)));
-        pages.add(Component.text("TRIGGER BOOKS\\n\\n", NamedTextColor.DARK_AQUA)
-                .append(Component.text("Each trigger has a permanent Trigger Book. Click the blue links in the book to edit settings. Re-selecting a configured trigger device with the wand can retrieve its book. The book is an interface; the server configuration stores the actual settings.\\n\\nThe first page identifies the trigger. The final page deletes it permanently.", NamedTextColor.BLACK)));
-        pages.add(Component.text("TRIGGERING DEVICES\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("COMMANDS\n\n", NamedTextColor.DARK_AQUA)
+                .append(Component.text("/gateworks wand — receive the selection wand\n/gateworks selection — show selected block count\n/gateworks clear — clear temporary selection\n/gateworks help — open this manual\n/gateworks book refresh — refresh the Temp Selection book\n\nAlias: /gw", NamedTextColor.BLACK)));
+        pages.add(Component.text("TRIGGER BOOKS\n\n", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Each trigger has a permanent Trigger Book. Click the blue links in the book to edit settings. Re-selecting a configured trigger device with the wand can retrieve its book. The book is an interface; the server configuration stores the actual settings.\n\nThe first page identifies the trigger. The final page deletes it permanently.", NamedTextColor.BLACK)));
+        pages.add(Component.text("TRIGGERING DEVICES\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("Supported devices include buttons, levers, pressure plates, and tripwire hooks. Buttons are pulse devices. Levers, pressure plates, and tripwire hooks provide an ON/OFF state. The configured device block is kept separate from the region it controls.", NamedTextColor.BLACK)));
-        pages.add(Component.text("REGIONS\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("REGIONS\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("Use the wand to select individual blocks or cuboids. Save the selection to a trigger to create its region. The region preview shows a sample; the wand visualizer shows the selection in the world. Region editing supports saving or cancelling changes. The trigger device cannot be part of its own region.", NamedTextColor.BLACK)));
-        pages.add(Component.text("ACTIONS\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("ACTIONS\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("Action 1 runs configured commands as the server console. Single mode runs one command. Toggle mode uses separate ON and OFF commands. Action 2 changes every saved region block between Primary (OFF) and Secondary (ON) materials. It does not preserve each block's original material or block data.", NamedTextColor.BLACK)));
-        pages.add(Component.text("STATUS LISTENER\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("STATUS LISTENER\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("The listener periodically runs its monitoring command and compares the captured response with the complete State A and State B text. State A means OFF/Primary; State B means ON/Secondary. A recognized response updates the confirmed logical state and region. The listener never runs Action 1 commands. An error or unrecognized response marks it OFFLINE and preserves the last confirmed state.", NamedTextColor.BLACK)));
-        pages.add(Component.text("SPAM PROTECTION\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("SPAM PROTECTION\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("Protection is configured per trigger and per player. It can apply a cooldown, detect repeated attempts within a time window, and temporarily lock out further activations. Player notifications can be enabled or disabled. OFF transitions on state-based devices are allowed through protection so a mechanism can return to its safe state.", NamedTextColor.BLACK)));
-        pages.add(Component.text("DIAGNOSTICS\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("DIAGNOSTICS\n\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("Listener health is shown in the Trigger Book. Use Show latest error to display its last recorded error in chat. OFFLINE does not mean the last confirmed state was lost: GateWorks deliberately keeps the last confirmed toggle and region state until it receives a recognized response. If a device is missing or its material changed, use the directory below to identify it.", NamedTextColor.BLACK)));
         List<String> ids = triggerIds();
         int perPage = 8;
         int directoryPages = Math.max(1, (ids.size() + perPage - 1) / perPage);
         if (ids.isEmpty()) {
-            pages.add(Component.text("TRIGGER DIRECTORY\\n\\n", NamedTextColor.DARK_AQUA)
+            pages.add(Component.text("TRIGGER DIRECTORY\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("No triggers have been configured yet. Create one by selecting a supported trigger device with the GateWorks wand.", NamedTextColor.GRAY)));
         } else {
             for (int page = 0; page < directoryPages; page++) {
-                Component directory = Component.text("TRIGGER DIRECTORY " + (page + 1) + "/" + directoryPages + "\\n\\n", NamedTextColor.DARK_AQUA)
-                        .append(Component.text("Status is checked when this Help Book is opened. Click a trigger to retrieve its book.\\n\\n", NamedTextColor.GRAY));
+                Component directory = Component.text("TRIGGER DIRECTORY " + (page + 1) + "/" + directoryPages + "\n\n", NamedTextColor.DARK_AQUA)
+                        .append(Component.text("Status is checked when this Help Book is opened. Click a trigger to retrieve its book.\n\n", NamedTextColor.GRAY));
                 int start = page * perPage;
                 int end = Math.min(ids.size(), start + perPage);
                 for (int index = start; index < end; index++) {
@@ -846,7 +846,7 @@ public final class TriggerWorkflowService {
                             : state.equals("MISMATCH") ? NamedTextColor.GOLD : NamedTextColor.RED;
                     directory = directory.append(Component.text(state + "  ", color))
                             .append(link(triggerName, "/gateworks book open-trigger " + triggerId))
-                            .append(Component.text("\\n", NamedTextColor.BLACK));
+                            .append(Component.text("\n", NamedTextColor.BLACK));
                 }
                 pages.add(directory);
             }
