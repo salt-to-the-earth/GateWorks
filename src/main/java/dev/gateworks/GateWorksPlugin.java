@@ -37,7 +37,8 @@ public final class GateWorksPlugin extends JavaPlugin {
             return;
         }
 
-        GateWorksCommand executor = new GateWorksCommand(this, selectionService, wandItemService, triggerWorkflow);
+        StatusListenerService statusListener = new StatusListenerService(this);
+        GateWorksCommand executor = new GateWorksCommand(this, selectionService, wandItemService, triggerWorkflow, statusListener);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
         getServer().getPluginManager().registerEvents(
@@ -47,7 +48,7 @@ public final class GateWorksPlugin extends JavaPlugin {
         TriggerActivationListener activationListener = new TriggerActivationListener(this);
         getServer().getPluginManager().registerEvents(activationListener, this);
         activationListener.initializeExistingTriggers();
-        new StatusListenerService(this).start();
+        statusListener.start();
 
         getLogger().info("GateWorks enabled. Selection tools, trigger books, and initial command actions are active.");
     }
