@@ -12,6 +12,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import dev.gateworks.trigger.TriggerWorkflowService;
+import dev.gateworks.trigger.StatusListenerService;
 
 import java.util.List;
 
@@ -19,12 +20,14 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     private final SelectionService selections;
     private final WandItemService wandItems;
     private final TriggerWorkflowService triggerWorkflow;
+    private final StatusListenerService statusListener;
 
     public GateWorksCommand(dev.gateworks.GateWorksPlugin plugin, SelectionService selections,
-                            WandItemService wandItems, TriggerWorkflowService triggerWorkflow) {
+                            WandItemService wandItems, TriggerWorkflowService triggerWorkflow, StatusListenerService statusListener) {
         this.selections = selections;
         this.wandItems = wandItems;
         this.triggerWorkflow = triggerWorkflow;
+        this.statusListener = statusListener;
     }
 
     @Override
@@ -47,11 +50,47 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             case "selection" -> showSelection(player);
             case "clear" -> clearSelection(player);
             case "book" -> handleBook(player, args);
+            case "listener-test" -> runListenerTest(player, args);
             default -> sendHelp(sender);
         }
         return true;
     }
 
+
+    private void runListenerTest(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /gateworks listener-test <trigger name>", NamedTextColor.YELLOW));
+            return;
+        }
+        String requestedName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length))
+                .replaceAll("^[\\\"]|[\\\"]$", "").trim();
+        String triggerId = null;
+        var triggers = player.getServer().getPluginManager().getPlugin("GateWorks");
+        if (triggers instanceof dev.gateworks.GateWorksPlugin plugin) {
+            var section = plugin.getConfig().getConfigurationSection("triggers");
+            if (section != null) for (String id : section.getKeys(false)) {
+                if (requestedName.equalsIgnoreCase(plugin.getConfig().getString("triggers." + id + ".name", ""))) {
+                    triggerId = id;
+                    break;
+                }
+            }
+        }
+        if (triggerId == null) {
+            player.sendMessage(Component.text("No trigger book was found with the name: " + requestedName, NamedTextColor.RED));
+            return;
+        }
+        var result = statusListener.testOnce(triggerId);
+        player.sendMessage(Component.text("=== GateWorks Listener Diagnostic ===", NamedTextColor.GOLD));
+        player.sendMessage(Component.text("Trigger: " + requestedName, NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Command attempted: " + result.command(), NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Captured response:", NamedTextColor.GOLD));
+        player.sendMessage(Component.text(result.response().isBlank() ? "<no response captured>" : result.response(), NamedTextColor.WHITE));
+        player.sendMessage(Component.text("Expected State A: " + (result.stateA().isBlank() ? "<not set>" : result.stateA()), NamedTextColor.AQUA));
+        player.sendMessage(Component.text("Expected State B: " + (result.stateB().isBlank() ? "<not set>" : result.stateB()), NamedTextColor.AQUA));
+        NamedTextColor resultColor = result.result().startsWith("MATCHED STATE") ? NamedTextColor.GREEN : NamedTextColor.RED;
+        player.sendMessage(Component.text("Result: " + result.result(), resultColor));
+        player.sendMessage(Component.text("Diagnostic only: no toggle, region, or listener health settings were changed.", NamedTextColor.GRAY));
+    }
 
     private void handleBook(Player player, String[] args) {
         if (args.length < 2) {
@@ -174,7 +213,7 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("wand", "selection", "clear", "book", "help").stream()
+            return List.of("wand", "selection", "clear", "book", "listener-test", "help").stream()
                     .filter(value -> value.startsWith(args[0].toLowerCase())).toList();
         }
         return List.of();
