@@ -10,7 +10,7 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 
 ## What works in the current development build
 
-- Paper plugin bootstrap and `/gateworks` command (`/gw` alias).
+- Paper plugin bootstrap and `/gateworks` command (`/gw` alias), including an in-game Help Book (`/gateworks help`) with a refreshed, clickable Trigger Directory at the end.
 - A uniquely tagged selection wand, obtained with `/gateworks wand`.
 - Left-click to add an individual block.
 - Shift + left-click to add a cuboid between the previous selection point and the clicked block.
@@ -27,7 +27,7 @@ Players use an ordinary, unmodified Minecraft Java client. No client-side mod is
 - Commands execute as the server console. Pulse devices act on their rising edge; state-based devices use their physical ON/OFF transitions when configured for toggle mode. Existing state is synchronized at startup without executing a command.
 - Every Temp Trigger Book includes spam-protection controls. The initial protection implementation provides a configurable per-trigger cooldown, per-player repeated-attempt threshold/window, temporary activation lockout, and optional player notification.
 - Triggers with a saved region include Action 2: administrators choose Primary and Secondary block types from a Creative-style, read-only inventory selector opened by clicking the material names in the Trigger Book. Categories include Building, Natural, Wood, Redstone, Functional, Decorative, and Special blocks. The selector includes Air, Barrier, Light (maximum level 15), Nether Portal, End Portal, End Gateway, End Portal Frame, and other technical blocks. The Secondary material defaults to Air; the Primary defaults to the first selected block's current material. Each activation replaces every saved region position with the Secondary type; the next activation restores the Primary type. Command Action 1 continues to run alongside the region change.
-- The Trigger Book remains the main configuration interface. The temporary inventory selector is only for choosing a block, shows player-readable names and the selected material, and prevents players from taking or moving its icons. The region preview and region-editing controls occupy separate Trigger Book pages.
+- The Trigger Book remains the main configuration interface. Its page order is overview, Action 1, region pages (when configured), status listener, listener settings, spam protection, spam-protection settings, and Delete Trigger last. The temporary inventory selector is only for choosing a block, shows player-readable names and the selected material, and prevents players from taking or moving its icons. The region preview and region-editing controls occupy separate Trigger Book pages.
 - `/gateworks selection` shows selection size and group count; `/gateworks clear` clears the current temporary selection.
 - A 4,096-block limit on a single cuboid gesture.
 - A configurable command status listener on each Trigger Book. It polls every 5 seconds by default (adjustable from 1 to 3,600 seconds), compares the captured command response against State A and State B, and updates the logical state and region only after a recognized response. The listener never runs Action 1 commands. Failed or unrecognized checks mark the listener OFFLINE, retain the last confirmed state and region, and save a simple error message for on-demand display.
