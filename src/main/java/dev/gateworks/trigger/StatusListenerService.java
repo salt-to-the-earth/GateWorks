@@ -167,3 +167,4 @@ public final class StatusListenerService {
         Bukkit.dispatchCommand(sender, normalized);
         return captured.toString();
     }
+}
