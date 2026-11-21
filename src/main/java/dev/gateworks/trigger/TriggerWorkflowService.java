@@ -935,11 +935,20 @@ public final class TriggerWorkflowService {
     }
 
     private Component suggestEditLink(String label, String id, String slot, String configPath) {
-        String currentValue = plugin.getConfig().getString(configPath, "");
-        String suggested = "/gateworks edit-input " + id + " " + slot
-                + (currentValue.isEmpty() ? " " : " " + currentValue);
-        return Component.text("▶ " + label, NamedTextColor.BLUE)
-                .clickEvent(ClickEvent.suggestCommand(suggested));
+        // Written books reliably support run_command, but not suggest_command on all clients.
+        // Start the existing validated chat-edit workflow instead of trying to prefill chat.
+        String command = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "single", "on", "off" -> "/gateworks book command " + id + " " + slot;
+            case "cooldown", "threshold", "window", "lockout" ->
+                    "/gateworks book protection-setting " + id + " " + slot;
+            case "listener-command" -> "/gateworks book listener-setting " + id + " command";
+            case "listener-state-a" -> "/gateworks book listener-setting " + id + " state-a";
+            case "listener-state-b" -> "/gateworks book listener-setting " + id + " state-b";
+            case "listener-interval" -> "/gateworks book listener-setting " + id + " interval";
+            default -> null;
+        };
+        if (command == null) return Component.text("▶ " + label, NamedTextColor.BLUE);
+        return link(label, command);
     }
 
     private Component link(String label, String command) {
