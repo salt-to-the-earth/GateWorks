@@ -57,7 +57,7 @@ public final class StatusListenerService {
         // The vanilla scoreboard command reports a sentence ending in "is <score>".
         // Normalize that standard response so the configured 0/1 values can be used.
         java.util.regex.Matcher scoreboard = java.util.regex.Pattern
-                .compile("(?i)^Score of .+ for objective .+ is (-?\\\\d+)\\\\s*$")
+                .compile("(?i)^Score of .+ for objective .+ is (-?\\d+)\\s*$")
                 .matcher(actual);
         if (scoreboard.matches()) actual = scoreboard.group(1);
         boolean confirmed;
