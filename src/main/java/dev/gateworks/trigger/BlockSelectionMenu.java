@@ -210,11 +210,11 @@ public final class BlockSelectionMenu implements Listener {
         else inventory.setItem(53, selectedIcon);
     }
 
-    private int pageCount(Category category, Set<Material> advancedPortalsAvailable) {
+    private int pageCount(Category category, boolean advancedPortalsAvailable) {
         return Math.max(1, (int) Math.ceil(materialsFor(category, advancedPortalsAvailable).size() / (double) PAGE_SIZE));
     }
 
-    private List<Material> materialsFor(Category category, Set<Material> advancedPortalsAvailable) {
+    private List<Material> materialsFor(Category category, boolean advancedPortalsAvailable) {
         List<Material> materials = new ArrayList<>(Arrays.stream(Material.values())
                 .filter(BlockSelectionMenu::isSelectableMaterial)
                 .filter(material -> belongsTo(material, category))
