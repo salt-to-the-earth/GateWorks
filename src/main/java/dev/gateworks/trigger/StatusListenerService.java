@@ -6,10 +6,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.plugin.java.JavaPlugin;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -115,48 +112,23 @@ public final class StatusListenerService {
         plugin.saveConfig();
     }
 
+    /**
+     * Paper's supported feedback sender captures command messages without implementing
+     * CommandSender ourselves. This is important for vanilla commands such as scoreboard,
+     * whose dispatcher rejects arbitrary/custom CommandSender implementations.
+     */
     private String executeAndCapture(String command) {
         String normalized = command.startsWith("/") ? command.substring(1).trim() : command;
         if (normalized.isEmpty()) return "";
+
         StringBuilder captured = new StringBuilder();
-        CommandSender console = Bukkit.getConsoleSender();
-        CommandSender sender = (CommandSender) Proxy.newProxyInstance(
-                CommandSender.class.getClassLoader(), new Class<?>[]{CommandSender.class},
-                (proxy, method, args) -> {
-                    if (method.getDeclaringClass() == Object.class) {
-                        return switch (method.getName()) {
-                            case "toString" -> "GateWorks monitoring console";
-                            case "hashCode" -> System.identityHashCode(proxy);
-                            case "equals" -> proxy == args[0];
-                            default -> null;
-                        };
-                    }
-                    if (method.getName().startsWith("sendMessage") && args != null) {
-                        for (Object arg : args) {
-                            String message = null;
-                            if (arg instanceof Component component) {
-                                message = PlainTextComponentSerializer.plainText().serialize(component);
-                            } else if (arg instanceof String string) {
-                                message = string;
-                            } else if (arg instanceof Component[] components) {
-                                for (Component component : components) {
-                                    if (!captured.isEmpty()) captured.append('\n');
-                                    captured.append(PlainTextComponentSerializer.plainText().serialize(component));
-                                }
-                            }
-                            if (message != null && !message.isBlank()) {
-                                if (!captured.isEmpty()) captured.append('\n');
-                                captured.append(message);
-                            }
-                        }
-                        return null;
-                    }
-                    try {
-                        return method.invoke(console, args);
-                    } catch (InvocationTargetException ex) {
-                        throw ex.getCause();
-                    }
-                });
+        CommandSender sender = Bukkit.createCommandSender((Component message) -> {
+            String plain = PlainTextComponentSerializer.plainText().serialize(message);
+            if (plain == null || plain.isBlank()) return;
+            if (!captured.isEmpty()) captured.append('\n');
+            captured.append(plain);
+        });
+
         Bukkit.dispatchCommand(sender, normalized);
         return captured.toString();
     }
