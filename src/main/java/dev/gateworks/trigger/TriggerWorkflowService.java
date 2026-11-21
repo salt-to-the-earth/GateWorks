@@ -147,7 +147,8 @@ public final class TriggerWorkflowService {
                             || edit.path().endsWith("lockout-seconds") ? 1L
                             : 0L;
                     if (edit.path().endsWith("spam-threshold")) minimum = 2L;
-                    if (value < minimum) throw new NumberFormatException();
+                    if (edit.path().endsWith("listener.interval-seconds")) minimum = 1L;
+                    if (value < minimum || (edit.path().endsWith("listener.interval-seconds") && value > 3600L)) throw new NumberFormatException();
                     plugin.getConfig().set(edit.path(), value);
                 } catch (NumberFormatException ex) {
                     pendingEdits.put(player.getUniqueId(), edit);
@@ -162,6 +163,10 @@ public final class TriggerWorkflowService {
                     return;
                 }
                 plugin.getConfig().set(edit.path(), value);
+            }
+            if (edit.path().contains(".listener.")) {
+                plugin.getConfig().set("triggers." + edit.triggerId() + ".listener.status", "OFFLINE");
+                plugin.getConfig().set("triggers." + edit.triggerId() + ".listener.last-error", "Waiting for the next monitoring check.");
             }
             plugin.saveConfig();
             giveTriggerBook(player, edit.triggerId());
@@ -235,6 +240,50 @@ public final class TriggerWorkflowService {
         player.closeInventory();
         player.sendMessage(Component.text("[GateWorks] Enter a whole number for " + setting
                 + ". Enter CANCEL to leave it unchanged.", NamedTextColor.GOLD));
+    }
+
+    public void promptForListenerSetting(Player player, String id, String setting) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        String key = switch (setting.toLowerCase(Locale.ROOT)) {
+            case "command" -> "command";
+            case "state-a" -> "state-a";
+            case "state-b" -> "state-b";
+            case "interval" -> "interval-seconds";
+            default -> null;
+        };
+        if (key == null) return;
+        boolean numeric = key.equals("interval-seconds");
+        pendingEdits.put(player.getUniqueId(), new PendingEdit(id,
+                "triggers." + id + ".listener." + key, "Listener " + setting, numeric));
+        player.closeInventory();
+        player.sendMessage(Component.text("[GateWorks] Enter " + (numeric
+                ? "a polling interval in seconds (1-3600)"
+                : setting.equals("command") ? "the monitoring command" : "the exact response text for " + setting.toUpperCase(Locale.ROOT))
+                + ". Enter CLEAR to empty the value or CANCEL to leave it unchanged.", NamedTextColor.GOLD));
+    }
+
+    public void toggleListener(Player player, String id) {
+        String base = "triggers." + id + ".listener.";
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        boolean enabled = plugin.getConfig().getBoolean(base + "enabled", false);
+        if (!enabled && plugin.getConfig().getString(base + "command", "").isBlank()) {
+            player.sendMessage(Component.text("Set a monitoring command before enabling the listener.", NamedTextColor.RED));
+            return;
+        }
+        plugin.getConfig().set(base + "enabled", !enabled);
+        plugin.getConfig().set(base + "status", "OFFLINE");
+        plugin.getConfig().set(base + "last-error", !enabled ? "Waiting for the next monitoring check." : "Listener disabled.");
+        plugin.saveConfig();
+        refreshTriggerBook(player, id);
+    }
+
+    public void showListenerError(Player player, String id) {
+        String base = "triggers." + id + ".listener.";
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
+        String error = plugin.getConfig().getString(base + "last-error", "");
+        if (error == null || error.isBlank()) error = "No listener error is currently recorded.";
+        player.sendMessage(Component.text("[GateWorks] Listener: ", NamedTextColor.GOLD)
+                .append(Component.text(error, NamedTextColor.YELLOW)));
     }
 
     public void toggleActionMode(Player player, String id) {
@@ -678,14 +727,36 @@ public final class TriggerWorkflowService {
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
                     .append(link(plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true)
                             ? "Disable spam protection" : "Enable spam protection", "/gateworks book protection " + id));
+            String listenerStatus = plugin.getConfig().getString("triggers." + id + ".listener.status",
+                    plugin.getConfig().getBoolean("triggers." + id + ".listener.enabled", false) ? "OFFLINE" : "DISABLED");
+            String monitorCommand = previewCommand(plugin.getConfig().getString("triggers." + id + ".listener.command", ""));
+            Component listenerPage = Component.text("STATUS LISTENER\n\n", NamedTextColor.DARK_AQUA)
+                    .append(Component.text("Health: " + listenerStatus + "\n", "ONLINE".equals(listenerStatus) ? NamedTextColor.GREEN : NamedTextColor.RED))
+                    .append(Component.text("Command: " + (monitorCommand.isBlank() ? "Not configured" : monitorCommand) + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("State A (OFF): " + plugin.getConfig().getString("triggers." + id + ".listener.state-a", "0") + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("State B (ON): " + plugin.getConfig().getString("triggers." + id + ".listener.state-b", "1") + "\n", NamedTextColor.BLACK))
+                    .append(Component.text("Polling: " + plugin.getConfig().getLong("triggers." + id + ".listener.interval-seconds", 5) + " seconds\n\n", NamedTextColor.BLACK))
+                    .append(link("Edit monitoring command", "/gateworks book listener-setting " + id + " command"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit State A response", "/gateworks book listener-setting " + id + " state-a"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit State B response", "/gateworks book listener-setting " + id + " state-b"))
+                    .append(Component.text("\n", NamedTextColor.BLACK))
+                    .append(link("Edit polling interval", "/gateworks book listener-setting " + id + " interval"))
+                    .append(Component.text("\n\n", NamedTextColor.BLACK))
+                    .append(link(plugin.getConfig().getBoolean("triggers." + id + ".listener.enabled", false)
+                            ? "Disable listener" : "Enable listener", "/gateworks book listener " + id))
+                    .append(Component.text("\n\n", NamedTextColor.BLACK))
+                    .append(link("Show latest error in chat", "/gateworks book listener-error " + id))
+                    .append(Component.text("\n\nThe listener only observes this command. It does not run Action 1 commands. State A applies Primary/OFF; State B applies Secondary/ON. Errors preserve the last confirmed state.", NamedTextColor.GRAY));
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
             if (blocks > 0) {
                 bm.pages(overview, region, regionControls, regionAction,
-                        actions, protection, protectionDetails, danger);
+                        actions, protection, protectionDetails, listenerPage, danger);
             } else {
-                bm.pages(overview, region, regionControls, actions, protection, protectionDetails, danger);
+                bm.pages(overview, region, regionControls, actions, protection, protectionDetails, listenerPage, danger);
             }
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
