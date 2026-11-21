@@ -1,9 +1,11 @@
 package dev.gateworks.trigger;
 
+import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Orientable;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
@@ -15,6 +17,20 @@ public final class RegionActionService {
 
     public RegionActionService(JavaPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    private record SelectedBlock(World world, int x, int y, int z) { }
+
+    /**
+     * Nether portal axis follows the long direction of the selected plane.
+     * A vertical plane with fixed X runs along Z; one with fixed Z runs along X.
+     * For a volumetric selection, the greater horizontal dimension wins.
+     * Equal or otherwise ambiguous dimensions consistently default to X.
+     */
+    private Axis determinePortalAxis(int sizeX, int sizeY, int sizeZ) {
+        if (sizeX == 1 && sizeZ > 1) return Axis.Z;
+        if (sizeZ == 1 && sizeX > 1) return Axis.X;
+        return sizeX > sizeZ ? Axis.X : Axis.Z;
     }
 
     /**
@@ -40,6 +56,14 @@ public final class RegionActionService {
 
         boolean valid = true;
         int changed = 0;
+        List<SelectedBlock> positions = new java.util.ArrayList<>();
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        UUID selectedWorld = null;
+
+        // Parse the complete selection first so Nether portal orientation is
+        // determined from the region as a whole, not click or save order.
         for (String entry : entries) {
             String[] parts = entry.split("\\|");
             if (parts.length != 5) {
@@ -47,19 +71,45 @@ public final class RegionActionService {
                 continue;
             }
             try {
-                World world = Bukkit.getWorld(UUID.fromString(parts[1]));
-                if (world == null) {
-                    valid = false;
-                    continue;
-                }
+                UUID worldId = UUID.fromString(parts[1]);
                 int x = Integer.parseInt(parts[2]);
                 int y = Integer.parseInt(parts[3]);
                 int z = Integer.parseInt(parts[4]);
-                Block block = world.getBlockAt(x, y, z);
+                World world = Bukkit.getWorld(worldId);
+                if (world == null || (selectedWorld != null && !selectedWorld.equals(worldId))) {
+                    valid = false;
+                    continue;
+                }
+                selectedWorld = worldId;
+                positions.add(new SelectedBlock(world, x, y, z));
+                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+            } catch (IllegalArgumentException ex) {
+                valid = false;
+            }
+        }
+
+        Axis portalAxis = target == Material.NETHER_PORTAL && !positions.isEmpty()
+                ? determinePortalAxis(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1)
+                : null;
+
+        for (SelectedBlock position : positions) {
+            try {
+                Block block = position.world().getBlockAt(position.x(), position.y(), position.z());
+                boolean blockChanged = false;
                 if (block.getType() != target) {
                     block.setType(target, false);
-                    changed++;
+                    blockChanged = true;
                 }
+                if (portalAxis != null && block.getBlockData() instanceof Orientable orientable
+                        && orientable.getAxis() != portalAxis) {
+                    orientable.setAxis(portalAxis);
+                    block.setBlockData(orientable, false);
+                    blockChanged = true;
+                }
+                if (blockChanged) changed++;
+
                 // GateWorks uses the maximum built-in Light Block level by default.
                 if (target == Material.LIGHT
                         && block.getBlockData() instanceof org.bukkit.block.data.type.Light light
@@ -68,8 +118,6 @@ public final class RegionActionService {
                     block.setBlockData(light, false);
                     changed++;
                 }
-            } catch (IllegalArgumentException ex) {
-                valid = false;
             } catch (RuntimeException ex) {
                 valid = false;
                 plugin.getLogger().warning("Could not replace a selected block for trigger " + triggerId
