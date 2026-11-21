@@ -113,23 +113,57 @@ public final class StatusListenerService {
     }
 
     /**
+     * Reads vanilla scoreboard-get commands directly from the main scoreboard.
+     *
+     * Minecraft command feedback is presentation output and can be suppressed or
+     * routed elsewhere by server/game-rule settings. The score itself is the
+     * authoritative value, so this path avoids depending on chat feedback.
+     *
+     * Returns null when the command is not a simple scoreboard players get query,
+     * or when the objective/entry has no stored score. Other commands continue
+     * through Paper's feedback-capturing command sender below.
+     */
+    private String readScoreboardGet(String command) {
+        String normalized = command.startsWith("/") ? command.substring(1).trim() : command.trim();
+        String[] parts = normalized.split("\\s+");
+        if (parts.length != 5
+                || !(parts[0].equalsIgnoreCase("scoreboard") || parts[0].equalsIgnoreCase("minecraft:scoreboard"))
+                || !parts[1].equalsIgnoreCase("players")
+                || !parts[2].equalsIgnoreCase("get")) {
+            return null;
+        }
+
+        var manager = Bukkit.getScoreboardManager();
+        if (manager == null) return null;
+        var objective = manager.getMainScoreboard().getObjective(parts[4]);
+        if (objective == null) return null;
+
+        var score = objective.getScore(parts[3]);
+        if (!score.isScoreSet()) return null;
+
+        String displayName = PlainTextComponentSerializer.plainText().serialize(objective.displayName());
+        return parts[3] + " has " + score.getScore() + " [" + displayName + "]";
+    }
+
+    /**
      * Paper's supported feedback sender captures command messages without implementing
-     * CommandSender ourselves. This is important for vanilla commands such as scoreboard,
-     * whose dispatcher rejects arbitrary/custom CommandSender implementations.
+     * CommandSender ourselves. This remains the fallback for general monitoring commands.
      */
     private String executeAndCapture(String command) {
         String normalized = command.startsWith("/") ? command.substring(1).trim() : command;
         if (normalized.isEmpty()) return "";
 
+        String scoreboardResponse = readScoreboardGet(normalized);
+        if (scoreboardResponse != null) return scoreboardResponse;
+
         StringBuilder captured = new StringBuilder();
         CommandSender sender = Bukkit.createCommandSender((Component message) -> {
             String plain = PlainTextComponentSerializer.plainText().serialize(message);
             if (plain == null || plain.isBlank()) return;
-            if (!captured.isEmpty()) captured.append('\n');
+            if (!captured.isEmpty()) captured.append('\\n');
             captured.append(plain);
         });
 
         Bukkit.dispatchCommand(sender, normalized);
         return captured.toString();
     }
-}
