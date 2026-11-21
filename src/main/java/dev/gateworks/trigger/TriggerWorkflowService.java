@@ -737,9 +737,7 @@ public final class TriggerWorkflowService {
                     .append(link(listenerEnabled ? "Disable listener" : "Enable listener", "/gateworks book listener " + id))
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
                     .append(link("Show latest error", "/gateworks book listener-error " + id))
-                    .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(Component.text("Settings are on the next page.\n", NamedTextColor.GRAY))
-                    .append(Component.text("The listener observes status only; it never runs Action 1 commands.", NamedTextColor.GRAY));
+                    .append(Component.text("\n\nThe listener observes status only; it never runs Action 1 commands.", NamedTextColor.GRAY));
             boolean commandConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.command", "").isBlank();
             boolean stateAConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.state-a", "").isBlank();
             boolean stateBConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.state-b", "").isBlank();
@@ -759,11 +757,14 @@ public final class TriggerWorkflowService {
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
                     .append(link("Delete this trigger", "/gateworks book delete " + id));
+            // Keep the book's navigation predictable: overview first, delete last.
+            // Put the frequently edited Action 1 commands immediately after the overview.
             if (blocks > 0) {
-                bm.pages(overview, region, regionControls, regionAction,
-                        actions, protection, protectionDetails, listenerPage, danger);
+                bm.pages(overview, actions, region, regionControls, regionAction,
+                        protection, protectionDetails, listenerPage, listenerSettingsPage, danger);
             } else {
-                bm.pages(overview, region, regionControls, actions, protection, protectionDetails, listenerPage, listenerSettingsPage, danger);
+                bm.pages(overview, actions, protection, protectionDetails,
+                        listenerPage, listenerSettingsPage, danger);
             }
             bm.getPersistentDataContainer().set(bookType, PersistentDataType.STRING, "trigger");
             bm.getPersistentDataContainer().set(bookId, PersistentDataType.STRING, id);
