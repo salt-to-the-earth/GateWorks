@@ -54,6 +54,12 @@ public final class StatusListenerService {
         String stateA = plugin.getConfig().getString(base + "state-a", "0").trim();
         String stateB = plugin.getConfig().getString(base + "state-b", "1").trim();
         String actual = response == null ? "" : response.trim();
+        // The vanilla scoreboard command reports a sentence ending in "is <score>".
+        // Normalize that standard response so the configured 0/1 values can be used.
+        java.util.regex.Matcher scoreboard = java.util.regex.Pattern
+                .compile("(?i)^Score of .+ for objective .+ is (-?\\\\d+)\\\\s*$")
+                .matcher(actual);
+        if (scoreboard.matches()) actual = scoreboard.group(1);
         boolean confirmed;
         boolean secondary;
         if (!actual.isEmpty() && !stateA.isEmpty() && actual.equalsIgnoreCase(stateA)) {
