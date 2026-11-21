@@ -546,6 +546,9 @@ public final class TriggerWorkflowService {
             return;
         }
         persistSelection(player, id);
+        // Saved configuration is authoritative; clear the temporary working
+        // selection so the particle visualizer stops drawing the edit.
+        selections.get(player.getUniqueId()).clear();
         regionTargets.remove(player.getUniqueId());
         regionBackups.remove(player.getUniqueId());
         plugin.saveConfig();
