@@ -256,10 +256,11 @@ public final class TriggerWorkflowService {
         pendingEdits.put(player.getUniqueId(), new PendingEdit(id,
                 "triggers." + id + ".listener." + key, "Listener " + setting, numeric));
         player.closeInventory();
-        player.sendMessage(Component.text("[GateWorks] Enter " + (numeric
+        player.sendMessage(Component.text("[GateWorks] Press T to open chat, then enter " + (numeric
                 ? "a polling interval in seconds (1-3600)"
-                : setting.equals("command") ? "the monitoring command" : "the exact response text for " + setting.toUpperCase(Locale.ROOT))
-                + ". Enter CLEAR to empty the value or CANCEL to leave it unchanged.", NamedTextColor.GOLD));
+                : setting.equals("command") ? "the monitoring command"
+                : "the complete expected response text for " + setting.toUpperCase(Locale.ROOT))
+                + ". Press Enter to save. Enter CLEAR to empty the value or CANCEL to leave it unchanged.", NamedTextColor.GOLD));
     }
 
     public void toggleListener(Player player, String id) {
