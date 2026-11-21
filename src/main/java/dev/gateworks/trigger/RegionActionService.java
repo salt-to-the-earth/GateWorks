@@ -30,7 +30,7 @@ public final class RegionActionService {
     private Axis determinePortalAxis(int sizeX, int sizeY, int sizeZ) {
         if (sizeX == 1 && sizeZ > 1) return Axis.Z;
         if (sizeZ == 1 && sizeX > 1) return Axis.X;
-        return sizeX > sizeZ ? Axis.X : Axis.Z;
+        return sizeX >= sizeZ ? Axis.X : Axis.Z;
     }
 
     /**
