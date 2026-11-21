@@ -181,6 +181,10 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
                 if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
                 else triggerWorkflow.showListenerError(player, args[2]);
             }
+            case "show-setting" -> {
+                if (args.length < 4) player.sendMessage(Component.text("Use /gateworks book show-setting <trigger-id> <setting>.", NamedTextColor.RED));
+                else triggerWorkflow.showCurrentSetting(player, args[2], args[3]);
+            }
             default -> player.sendMessage(Component.text("Unknown book action.", NamedTextColor.RED));
         }
     }
