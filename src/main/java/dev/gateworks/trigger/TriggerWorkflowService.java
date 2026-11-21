@@ -271,7 +271,7 @@ public final class TriggerWorkflowService {
             return;
         }
         plugin.getConfig().set(base + "enabled", !enabled);
-        plugin.getConfig().set(base + "status", "OFFLINE");
+        plugin.getConfig().set(base + "status", !enabled ? "OFFLINE" : "DISABLED");
         plugin.getConfig().set(base + "last-error", !enabled ? "Waiting for the next monitoring check." : "Listener disabled.");
         plugin.saveConfig();
         refreshTriggerBook(player, id);
