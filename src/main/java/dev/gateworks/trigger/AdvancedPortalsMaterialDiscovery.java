@@ -32,8 +32,15 @@ final class AdvancedPortalsMaterialDiscovery {
         }
 
         try {
-            List<String> suggestions = Bukkit.getCommandMap().tabComplete(player, "portal ");
-            if (suggestions == null || suggestions.isEmpty()) return Set.of();
+            // Invoke the registered /portal command completer directly with
+            // an empty first argument, matching Tab after "/portal ".
+            // CommandMap.tabComplete(commandLine) can lose a trailing empty
+            // argument during server-side tokenization.
+            List<String> suggestions = portalCommand.tabComplete(player, "portal", new String[]{""});
+            if (suggestions == null || suggestions.isEmpty()) {
+                advancedPortals.getLogger().fine("GateWorks found Advanced Portals but /portal returned no suggestions.");
+                return Set.of();
+            }
 
             Set<Material> discovered = EnumSet.noneOf(Material.class);
             for (String suggestion : suggestions) {
