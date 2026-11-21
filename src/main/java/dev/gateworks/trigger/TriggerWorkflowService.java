@@ -254,6 +254,7 @@ public final class TriggerWorkflowService {
             default -> null;
         };
         if (path == null) return;
+        showCurrentSetting(player, id, slot);
         pendingEdits.put(player.getUniqueId(), new PendingEdit(id, path, slot.toUpperCase(Locale.ROOT) + " command", false));
         player.closeInventory();
         player.sendMessage(Component.text("[GateWorks] Enter the " + slot.toUpperCase(Locale.ROOT)
@@ -270,6 +271,7 @@ public final class TriggerWorkflowService {
             default -> null;
         };
         if (key == null) return;
+        showCurrentSetting(player, id, setting);
         pendingEdits.put(player.getUniqueId(), new PendingEdit(id, "triggers." + id + ".protection." + key, setting, true));
         player.closeInventory();
         player.sendMessage(Component.text("[GateWorks] Enter a whole number for " + setting
@@ -287,6 +289,7 @@ public final class TriggerWorkflowService {
         };
         if (key == null) return;
         boolean numeric = key.equals("interval-seconds");
+        showCurrentSetting(player, id, "listener-" + setting.toLowerCase(Locale.ROOT));
         pendingEdits.put(player.getUniqueId(), new PendingEdit(id,
                 "triggers." + id + ".listener." + key, "Listener " + setting, numeric));
         player.closeInventory();
@@ -935,8 +938,7 @@ public final class TriggerWorkflowService {
     }
 
     private Component suggestEditLink(String label, String id, String slot, String configPath) {
-        // Written books reliably support run_command, but not suggest_command on all clients.
-        // Start the existing validated chat-edit workflow instead of trying to prefill chat.
+        // Written books reliably support run_command, so both actions use server commands.
         String command = switch (slot.toLowerCase(Locale.ROOT)) {
             case "single", "on", "off" -> "/gateworks book command " + id + " " + slot;
             case "cooldown", "threshold", "window", "lockout" ->
@@ -948,7 +950,53 @@ public final class TriggerWorkflowService {
             default -> null;
         };
         if (command == null) return Component.text("▶ " + label, NamedTextColor.BLUE);
-        return link(label, command);
+        return link(label, command)
+                .append(Component.text("  ", NamedTextColor.BLACK))
+                .append(link("Show", "/gateworks book show-setting " + id + " " + slot));
+    }
+
+    /** Displays the exact currently saved value without changing or executing it. */
+    public void showCurrentSetting(Player player, String id, String slot) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) {
+            player.sendMessage(Component.text("[GateWorks] Trigger could not be found.", NamedTextColor.RED));
+            return;
+        }
+        String path = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "single" -> "triggers." + id + ".action.single-command";
+            case "on" -> "triggers." + id + ".action.on-command";
+            case "off" -> "triggers." + id + ".action.off-command";
+            case "cooldown" -> "triggers." + id + ".protection.cooldown-ms";
+            case "threshold" -> "triggers." + id + ".protection.spam-threshold";
+            case "window" -> "triggers." + id + ".protection.spam-window-seconds";
+            case "lockout" -> "triggers." + id + ".protection.lockout-seconds";
+            case "listener-command" -> "triggers." + id + ".listener.command";
+            case "listener-state-a" -> "triggers." + id + ".listener.state-a";
+            case "listener-state-b" -> "triggers." + id + ".listener.state-b";
+            case "listener-interval" -> "triggers." + id + ".listener.interval-seconds";
+            default -> null;
+        };
+        if (path == null) {
+            player.sendMessage(Component.text("[GateWorks] Unknown setting.", NamedTextColor.RED));
+            return;
+        }
+        Object saved = plugin.getConfig().get(path);
+        String value = saved == null ? "" : String.valueOf(saved);
+        String description = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "single" -> "single command";
+            case "on" -> "ON command";
+            case "off" -> "OFF command";
+            case "cooldown" -> "cooldown (milliseconds)";
+            case "threshold" -> "spam threshold";
+            case "window" -> "detection window (seconds)";
+            case "lockout" -> "lockout duration (seconds)";
+            case "listener-command" -> "monitoring command";
+            case "listener-state-a" -> "State A expected response";
+            case "listener-state-b" -> "State B expected response";
+            case "listener-interval" -> "polling interval (seconds)";
+            default -> "setting";
+        };
+        player.sendMessage(Component.text("[GateWorks] Current " + description + ": ", NamedTextColor.GOLD)
+                .append(Component.text(value.isBlank() ? "(empty)" : value, NamedTextColor.YELLOW)));
     }
 
     private Component link(String label, String command) {
