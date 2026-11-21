@@ -211,6 +211,40 @@ public final class TriggerWorkflowService {
         return naming.containsKey(playerId) || pendingEdits.containsKey(playerId);
     }
 
+    /**
+     * Saves a value submitted through the book's pre-filled chat command.
+     * The value is supplied after the fixed command arguments so spaces remain editable.
+     */
+    public void acceptSuggestedEdit(Player player, String id, String slot, String value) {
+        if (!plugin.getConfig().contains("triggers." + id + ".name")) {
+            player.sendMessage(Component.text("That trigger could not be found.", NamedTextColor.RED));
+            return;
+        }
+        String path = switch (slot.toLowerCase(Locale.ROOT)) {
+            case "single" -> "triggers." + id + ".action.single-command";
+            case "on" -> "triggers." + id + ".action.on-command";
+            case "off" -> "triggers." + id + ".action.off-command";
+            case "cooldown" -> "triggers." + id + ".protection.cooldown-ms";
+            case "threshold" -> "triggers." + id + ".protection.spam-threshold";
+            case "window" -> "triggers." + id + ".protection.spam-window-seconds";
+            case "lockout" -> "triggers." + id + ".protection.lockout-seconds";
+            case "listener-command" -> "triggers." + id + ".listener.command";
+            case "listener-state-a" -> "triggers." + id + ".listener.state-a";
+            case "listener-state-b" -> "triggers." + id + ".listener.state-b";
+            case "listener-interval" -> "triggers." + id + ".listener.interval-seconds";
+            default -> null;
+        };
+        if (path == null) {
+            player.sendMessage(Component.text("Unknown GateWorks edit field.", NamedTextColor.RED));
+            return;
+        }
+        boolean numeric = !slot.equalsIgnoreCase("single") && !slot.equalsIgnoreCase("on")
+                && !slot.equalsIgnoreCase("off") && !slot.equalsIgnoreCase("listener-command")
+                && !slot.equalsIgnoreCase("listener-state-a") && !slot.equalsIgnoreCase("listener-state-b");
+        pendingEdits.put(player.getUniqueId(), new PendingEdit(id, path, slot, numeric));
+        acceptName(player, value);
+    }
+
     public void promptForCommand(Player player, String id, String slot) {
         if (!plugin.getConfig().contains("triggers." + id + ".name")) return;
         String path = switch (slot.toLowerCase(Locale.ROOT)) {
