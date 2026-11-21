@@ -44,6 +44,30 @@ public final class StatusListenerService {
         }
     }
 
+    /** Runs a one-shot diagnostic without changing listener health, logical state, or regions. */
+    public DiagnosticResult testOnce(String id) {
+        String base = "triggers." + id + ".listener.";
+        String command = plugin.getConfig().getString(base + "command", "").trim();
+        String stateA = plugin.getConfig().getString(base + "state-a", "").trim();
+        String stateB = plugin.getConfig().getString(base + "state-b", "").trim();
+        if (command.isEmpty()) return new DiagnosticResult("", "", stateA, stateB, "No monitoring command is configured.");
+        String response;
+        try {
+            response = executeAndCapture(command);
+        } catch (Throwable error) {
+            response = "";
+            return new DiagnosticResult(command, response, stateA, stateB,
+                    "Command execution threw " + error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
+        }
+        String actual = response == null ? "" : response.trim();
+        String match = !actual.isEmpty() && !stateA.isEmpty() && actual.equalsIgnoreCase(stateA) ? "MATCHED STATE A"
+                : !actual.isEmpty() && !stateB.isEmpty() && actual.equalsIgnoreCase(stateB) ? "MATCHED STATE B"
+                : "MATCHED NEITHER";
+        return new DiagnosticResult(command, actual, stateA, stateB, match);
+    }
+
+    public record DiagnosticResult(String command, String response, String stateA, String stateB, String result) {}
+
     private void check(String id, String command, String base) {
         String response;
         try {
