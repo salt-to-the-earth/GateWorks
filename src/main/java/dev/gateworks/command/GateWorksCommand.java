@@ -50,6 +50,16 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             case "selection" -> showSelection(player);
             case "clear" -> clearSelection(player);
             case "book" -> handleBook(player, args);
+            case "edit-input" -> {
+                if (args.length < 3) {
+                    player.sendMessage(Component.text("The GateWorks edit link was incomplete. Reopen the Trigger Book and try again.", NamedTextColor.RED));
+                } else {
+                    String value = args.length > 3
+                            ? String.join(" ", java.util.Arrays.copyOfRange(args, 3, args.length))
+                            : "";
+                    triggerWorkflow.acceptSuggestedEdit(player, args[1], args[2], value);
+                }
+            }
             case "listener-test" -> runListenerTest(player, args);
             default -> sendHelp(sender);
         }
