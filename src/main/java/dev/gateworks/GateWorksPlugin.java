@@ -9,6 +9,7 @@ import dev.gateworks.trigger.TriggerWorkflowService;
 import dev.gateworks.trigger.TriggerNamingListener;
 import dev.gateworks.trigger.TriggerActivationListener;
 import dev.gateworks.trigger.BlockSelectionMenu;
+import dev.gateworks.trigger.StatusListenerService;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -46,6 +47,7 @@ public final class GateWorksPlugin extends JavaPlugin {
         TriggerActivationListener activationListener = new TriggerActivationListener(this);
         getServer().getPluginManager().registerEvents(activationListener, this);
         activationListener.initializeExistingTriggers();
+        new StatusListenerService(this).start();
 
         getLogger().info("GateWorks enabled. Selection tools, trigger books, and initial command actions are active.");
     }
