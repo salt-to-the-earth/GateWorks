@@ -700,15 +700,15 @@ public final class TriggerWorkflowService {
             Component actions = Component.text("ACTION 1 — COMMANDS\n\n", NamedTextColor.DARK_AQUA);
             if ("TOGGLE".equalsIgnoreCase(actionMode)) {
                 actions = actions.append(Component.text("Mode: ON / OFF command toggle\n\n", NamedTextColor.BLACK))
-                        .append(link("Edit ON command", "/gateworks book command " + id + " on"))
+                        .append(suggestEditLink("Edit ON command", id, "on", "triggers." + id + ".action.on-command"))
                         .append(Component.text("\n" + (onCommand.isBlank() ? "(empty)" : onCommand) + "\n\n", NamedTextColor.DARK_GRAY))
-                        .append(link("Edit OFF command", "/gateworks book command " + id + " off"))
+                        .append(suggestEditLink("Edit OFF command", id, "off", "triggers." + id + ".action.off-command"))
                         .append(Component.text("\n" + (offCommand.isBlank() ? "(empty)" : offCommand) + "\n\n", NamedTextColor.DARK_GRAY));
                 if (blocks == 0) actions = actions.append(link("Switch to single command", "/gateworks book mode " + id));
                 else actions = actions.append(Component.text("A region requires command-toggle mode.\n", NamedTextColor.GRAY));
             } else {
                 actions = actions.append(Component.text("Mode: Single command\n\n", NamedTextColor.BLACK))
-                        .append(link("Edit single command", "/gateworks book command " + id + " single"))
+                        .append(suggestEditLink("Edit single command", id, "single", "triggers." + id + ".action.single-command"))
                         .append(Component.text("\n" + (singleCommand.isBlank() ? "(empty)" : singleCommand) + "\n\n", NamedTextColor.DARK_GRAY))
                         .append(link("Enable ON / OFF toggle", "/gateworks book mode " + id));
             }
@@ -716,15 +716,15 @@ public final class TriggerWorkflowService {
                     .append(Component.text("Status: " + (plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true) ? "Enabled" : "Disabled") + "\n", NamedTextColor.BLACK))
                     .append(Component.text("Cooldown: " + plugin.getConfig().getLong("triggers." + id + ".protection.cooldown-ms", 1000L) + " ms\n", NamedTextColor.BLACK))
                     .append(Component.text("Spam threshold: " + plugin.getConfig().getInt("triggers." + id + ".protection.spam-threshold", 5) + " attempts\n\n", NamedTextColor.BLACK))
-                    .append(link("Edit cooldown", "/gateworks book protection-setting " + id + " cooldown"))
+                    .append(suggestEditLink("Edit cooldown", id, "cooldown", "triggers." + id + ".protection.cooldown-ms"))
                     .append(Component.text("\n", NamedTextColor.BLACK))
-                    .append(link("Edit spam threshold", "/gateworks book protection-setting " + id + " threshold"));
+                    .append(suggestEditLink("Edit spam threshold", id, "threshold", "triggers." + id + ".protection.spam-threshold"));
             Component protectionDetails = Component.text("SPAM PROTECTION — SETTINGS\n\n", NamedTextColor.DARK_AQUA)
                     .append(Component.text("Detection window: " + plugin.getConfig().getLong("triggers." + id + ".protection.spam-window-seconds", 10L) + " seconds\n", NamedTextColor.BLACK))
                     .append(Component.text("Lockout: " + plugin.getConfig().getLong("triggers." + id + ".protection.lockout-seconds", 15L) + " seconds\n\n", NamedTextColor.BLACK))
-                    .append(link("Edit detection window", "/gateworks book protection-setting " + id + " window"))
+                    .append(suggestEditLink("Edit detection window", id, "window", "triggers." + id + ".protection.spam-window-seconds"))
                     .append(Component.text("\n", NamedTextColor.BLACK))
-                    .append(link("Edit lockout duration", "/gateworks book protection-setting " + id + " lockout"))
+                    .append(suggestEditLink("Edit lockout duration", id, "lockout", "triggers." + id + ".protection.lockout-seconds"))
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
                     .append(link(plugin.getConfig().getBoolean("triggers." + id + ".protection.enabled", true)
                             ? "Disable spam protection" : "Enable spam protection", "/gateworks book protection " + id));
@@ -742,17 +742,13 @@ public final class TriggerWorkflowService {
             boolean stateAConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.state-a", "").isBlank();
             boolean stateBConfigured = !plugin.getConfig().getString("triggers." + id + ".listener.state-b", "").isBlank();
             Component listenerSettingsPage = Component.text("LISTENER SETTINGS\n\n", NamedTextColor.DARK_AQUA)
-                    .append(link("Monitoring command: " + (commandConfigured ? "Edit" : "Not set — add"),
-                            "/gateworks book listener-setting " + id + " command"))
+                    .append(suggestEditLink("Monitoring command: " + (commandConfigured ? "Edit" : "Not set — add"), id, "listener-command", "triggers." + id + ".listener.command"))
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link("State A (OFF): " + (stateAConfigured ? "Edit" : "Not set — add"),
-                            "/gateworks book listener-setting " + id + " state-a"))
+                    .append(suggestEditLink("State A (OFF): " + (stateAConfigured ? "Edit" : "Not set — add"), id, "listener-state-a", "triggers." + id + ".listener.state-a"))
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link("State B (ON): " + (stateBConfigured ? "Edit" : "Not set — add"),
-                            "/gateworks book listener-setting " + id + " state-b"))
+                    .append(suggestEditLink("State B (ON): " + (stateBConfigured ? "Edit" : "Not set — add"), id, "listener-state-b", "triggers." + id + ".listener.state-b"))
                     .append(Component.text("\n\n", NamedTextColor.BLACK))
-                    .append(link("Polling interval: " + plugin.getConfig().getLong("triggers." + id + ".listener.interval-seconds", 5) + " sec — edit",
-                            "/gateworks book listener-setting " + id + " interval"))
+                    .append(suggestEditLink("Polling interval: " + plugin.getConfig().getLong("triggers." + id + ".listener.interval-seconds", 5) + " sec — edit", id, "listener-interval", "triggers." + id + ".listener.interval-seconds"))
                     .append(Component.text("\n\nEnter values in chat after selecting an edit link.\nPress T to open chat if it does not open automatically.", NamedTextColor.GRAY));
             Component danger = Component.text("TRIGGER MANAGEMENT\n\n", NamedTextColor.DARK_RED)
                     .append(Component.text("Deleting this trigger permanently removes its saved region and trigger settings.\n\n", NamedTextColor.BLACK))
@@ -776,7 +772,7 @@ public final class TriggerWorkflowService {
     /** Issues the in-game manual; the trigger directory is always the final section. */
     public void giveHelpBook(Player player) {
         List<Component> pages = new ArrayList<>();
-        pages.add(Component.text("GATEWORKS HELP\\nGETTING STARTED\\n\\n", NamedTextColor.DARK_AQUA)
+        pages.add(Component.text("GATEWORKS HELP\nGETTING STARTED\\n\\n", NamedTextColor.DARK_AQUA)
                 .append(Component.text("GateWorks lets administrators configure physical triggers, command actions, monitored states, and block regions.\\n\\n", NamedTextColor.BLACK))
                 .append(Component.text("1. Get the wand: /gateworks wand\\n2. Select blocks with the wand.\\n3. Click a supported trigger device to create its Trigger Book.\\n4. Configure actions and optional regions in that book.\\n\\n", NamedTextColor.BLACK))
                 .append(Component.text("Use the page arrows to move through this manual. Re-run /gateworks help to refresh the directory.", NamedTextColor.GRAY)));
@@ -902,6 +898,14 @@ public final class TriggerWorkflowService {
         String name = material.name();
         return name.endsWith("_BUTTON") || material == Material.LEVER
                 || name.endsWith("_PRESSURE_PLATE") || material == Material.TRIPWIRE_HOOK;
+    }
+
+    private Component suggestEditLink(String label, String id, String slot, String configPath) {
+        String currentValue = plugin.getConfig().getString(configPath, "");
+        String suggested = "/gateworks edit-input " + id + " " + slot
+                + (currentValue.isEmpty() ? " " : " " + currentValue);
+        return Component.text("▶ " + label, NamedTextColor.BLUE)
+                .clickEvent(ClickEvent.suggestCommand(suggested));
     }
 
     private Component link(String label, String command) {
