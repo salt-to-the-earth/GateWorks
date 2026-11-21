@@ -108,7 +108,8 @@ public final class TriggerActivationListener implements Listener {
         if (!acceptActivation(id, base, actor, safeRelease)) {
             // Keep the logical switch aligned even when spam protection blocks
             // an ON request. A later OFF transition must still be able to run.
-            if (stateBased && "TOGGLE".equalsIgnoreCase(mode)) {
+            if (stateBased && "TOGGLE".equalsIgnoreCase(mode)
+                    && !plugin.getConfig().getBoolean(base + "listener.enabled", false)) {
                 plugin.getConfig().set(base + "runtime.logical-state", isPowered);
                 plugin.saveConfig();
             }
@@ -128,7 +129,9 @@ public final class TriggerActivationListener implements Listener {
             } else {
                 nextState = !plugin.getConfig().getBoolean(base + "runtime.logical-state", false);
             }
-            plugin.getConfig().set(base + "runtime.logical-state", nextState);
+            if (!plugin.getConfig().getBoolean(base + "listener.enabled", false)) {
+                plugin.getConfig().set(base + "runtime.logical-state", nextState);
+            }
             dispatch(nextState ? on : off);
         } else {
             // With only one populated ON/OFF command, it behaves as a single
@@ -144,7 +147,8 @@ public final class TriggerActivationListener implements Listener {
             }
             if (!command.isEmpty()) dispatch(command);
         }
-        if (plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
+        if (!plugin.getConfig().getBoolean(base + "listener.enabled", false)
+                && plugin.getConfig().getInt(base + "selection-blocks", 0) > 0) {
             boolean secondaryState = stateBased ? isPowered
                     : !plugin.getConfig().getBoolean(base + "region.runtime-secondary", false);
             if (regionActions.apply(id, secondaryState)) {
