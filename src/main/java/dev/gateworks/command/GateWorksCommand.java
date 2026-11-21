@@ -34,7 +34,8 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            sendHelp(sender);
+            if (sender instanceof Player player) triggerWorkflow.giveHelpBook(player);
+            else sendHelp(sender);
             return true;
         }
         if (!(sender instanceof Player player)) {
@@ -58,6 +59,10 @@ public final class GateWorksCommand implements CommandExecutor, TabCompleter {
             return;
         }
         switch (args[1].toLowerCase()) {
+            case "open-trigger" -> {
+                if (args.length < 3) player.sendMessage(Component.text("Missing trigger ID.", NamedTextColor.RED));
+                else triggerWorkflow.openTriggerBook(player, args[2]);
+            }
             case "refresh" -> {
                 triggerWorkflow.refreshSelectionBook(player);
                 player.sendMessage(Component.text("Selection book refreshed.", NamedTextColor.GREEN));
