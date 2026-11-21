@@ -64,6 +64,7 @@ public final class BlockSelectionMenu implements Listener {
         private final String slot;
         private Category category = Category.BUILDING;
         private int page;
+        private Set<Material> advancedPortalMaterials = Set.of();
         private Inventory inventory;
 
         private MenuHolder(String triggerId, String slot) {
@@ -93,6 +94,8 @@ public final class BlockSelectionMenu implements Listener {
             return;
         }
         MenuHolder holder = new MenuHolder(triggerId, slot.toLowerCase(Locale.ROOT));
+        // Discover optional portal materials only when this selector is opened.
+        holder.advancedPortalMaterials = AdvancedPortalsMaterialDiscovery.discover(player);
         Inventory inventory = Bukkit.createInventory(holder, 54,
                 Component.text("Choose " + titleCase(slot) + " Material"));
         holder.inventory = inventory;
@@ -131,7 +134,7 @@ public final class BlockSelectionMenu implements Listener {
             return;
         }
         if (rawSlot == 50) {
-            int pages = pageCount(holder.category);
+            int pages = pageCount(holder.category, holder.advancedPortalMaterials);
             holder.page = Math.min(pages - 1, holder.page + 1);
             render(holder);
             player.updateInventory();
@@ -139,7 +142,7 @@ public final class BlockSelectionMenu implements Listener {
         }
         if (rawSlot < 9 || rawSlot > 44) return;
 
-        List<Material> materials = materialsFor(holder.category);
+        List<Material> materials = materialsFor(holder.category, holder.advancedPortalMaterials);
         int index = holder.page * PAGE_SIZE + rawSlot - 9;
         if (index < 0 || index >= materials.size()) return;
         Material selected = materials.get(index);
@@ -168,7 +171,7 @@ public final class BlockSelectionMenu implements Listener {
         }
         inventory.setItem(8, item(Material.BARRIER, "Close", "Return to the Trigger Book", false));
 
-        List<Material> materials = materialsFor(holder.category);
+        List<Material> materials = materialsFor(holder.category, holder.advancedPortalMaterials);
         int start = holder.page * PAGE_SIZE;
         int end = Math.min(materials.size(), start + PAGE_SIZE);
         String selectedName = plugin.getConfig().getString("triggers." + holder.triggerId
@@ -192,7 +195,7 @@ public final class BlockSelectionMenu implements Listener {
         inventory.setItem(45, item(Material.WRITTEN_BOOK, "Back to Trigger Book",
                 "Close the selector without changing anything", false));
         inventory.setItem(48, item(Material.ARROW, "Previous Page", "Browse earlier blocks", false));
-        int pages = pageCount(holder.category);
+        int pages = pageCount(holder.category, holder.advancedPortalMaterials);
         inventory.setItem(49, item(Material.PAPER, "Page " + (holder.page + 1) + " / " + pages,
                 materials.size() + " available block types in " + holder.category.label, false));
         inventory.setItem(50, item(Material.ARROW, "Next Page", "Browse more blocks", false));
@@ -202,17 +205,25 @@ public final class BlockSelectionMenu implements Listener {
                 selected == null ? "Choose a block above" : selected.name(), true));
     }
 
-    private int pageCount(Category category) {
-        return Math.max(1, (int) Math.ceil(materialsFor(category).size() / (double) PAGE_SIZE));
+    private int pageCount(Category category, Set<Material> advancedPortalMaterials) {
+        return Math.max(1, (int) Math.ceil(materialsFor(category, advancedPortalMaterials).size() / (double) PAGE_SIZE));
     }
 
-    private List<Material> materialsFor(Category category) {
-        return Arrays.stream(Material.values())
+    private List<Material> materialsFor(Category category, Set<Material> advancedPortalMaterials) {
+        List<Material> materials = new ArrayList<>(Arrays.stream(Material.values())
                 .filter(BlockSelectionMenu::isSelectableMaterial)
                 .filter(material -> belongsTo(material, category))
-                // Keep related blocks together, closer to the way the vanilla
-                // Creative inventory presents building materials, rather than
-                // making players hunt through a purely alphabetical list.
+                .toList());
+        // Advanced Portals entries appear in Special, and only when the plugin
+        // returned matching block suggestions during this menu opening.
+        if (category == Category.SPECIAL) {
+            for (Material material : advancedPortalMaterials) {
+                if (isSelectableMaterial(material) && !materials.contains(material)) materials.add(material);
+            }
+        }
+        // Keep related blocks together, closer to the way the vanilla Creative
+        // inventory presents building materials, rather than purely alphabetically.
+        return materials.stream()
                 .sorted(Comparator.comparingInt((Material material) -> displayGroup(material, category))
                         .thenComparingInt(material -> variantOrder(material, category))
                         .thenComparing(BlockSelectionMenu::prettyName))
